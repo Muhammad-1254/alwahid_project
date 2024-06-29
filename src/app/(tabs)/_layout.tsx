@@ -26,9 +26,11 @@ export default function TabsLayout() {
               colorScheme === "dark" ? Colors.dark.accent : Colors.light.accent,
           },
           headerTitle: "Home",
-          headerTitleStyle:{
-            color:colorScheme === "dark" ? Colors.dark.primary : Colors.light.primary
-          
+          headerTitleStyle: {
+            color:
+              colorScheme === "dark"
+                ? Colors.dark.primary
+                : Colors.light.primary,
           },
           tabBarIcon: ({ color, focused }) => {
             return (
@@ -48,7 +50,7 @@ export default function TabsLayout() {
           },
         }}
       />
-        <Tabs.Screen
+      <Tabs.Screen
         name="search"
         options={{
           title: "",
@@ -61,22 +63,24 @@ export default function TabsLayout() {
               colorScheme === "dark" ? Colors.dark.accent : Colors.light.accent,
           },
           headerTitle: "Home",
-          headerTitleStyle:{
-            color:colorScheme === "dark" ? Colors.dark.primary : Colors.light.primary
-          
+          headerTitleStyle: {
+            color:
+              colorScheme === "dark"
+                ? Colors.dark.primary
+                : Colors.light.primary,
           },
           tabBarIcon: ({ color, focused }) => {
             return (
               <Ionicons
                 style={{
                   marginBottom: -5,
-                  color:
-                    colorScheme === "dark"
-                      ? Colors.dark.primary
-                      : Colors.light.primary,
                 }}
                 name={focused ? "search" : "search-outline"}
-                color={color}
+                color={
+                  colorScheme === "dark"
+                    ? Colors.dark.primary
+                    : Colors.light.primary
+                }
                 size={25}
               />
             );
@@ -85,6 +89,40 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="notification"
+        options={{
+          title: "",
+          // headerStyle: {
+          //   backgroundColor:
+          //     colorScheme === "dark" ? Colors.dark.muted : Colors.light.muted,
+          // },
+          tabBarStyle: {
+            backgroundColor:
+              colorScheme === "dark" ? Colors.dark.accent : Colors.light.accent,
+          },
+          // headerTitle: "Notifications",
+          // headerTitleStyle: {
+          //   color:
+          //     colorScheme === "dark"
+          //       ? Colors.dark.primary
+          //       : Colors.light.primary,
+          // },
+          headerShown:false,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              style={{ marginBottom: -5 }}
+              name={focused ? "notifications" : "notifications-outline"}
+              color={
+                colorScheme === "dark"
+                  ? Colors.dark.primary
+                  : Colors.light.primary
+              }
+              size={25}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="chats"
         options={{
           title: "",
           headerStyle: {
@@ -96,18 +134,21 @@ export default function TabsLayout() {
               colorScheme === "dark" ? Colors.dark.accent : Colors.light.accent,
           },
           headerTitle: "Notifications",
-          headerTitleStyle:{
-            color:colorScheme === "dark" ? Colors.dark.primary : Colors.light.primary
-          
+          headerTitleStyle: {
+            color:
+              colorScheme === "dark"
+                ? Colors.dark.primary
+                : Colors.light.primary,
           },
-          tabBarIcon: ({ color, focused }) => (
+          tabBarIcon: ({ focused }) => (
             <Ionicons
-              style={{ marginBottom: -5 , color:
+              style={{ marginBottom: -5,  }}
+              name={focused ? "chatbubble" : "chatbubble-outline"}
+              color={
                 colorScheme === "dark"
                   ? Colors.dark.primary
-                  : Colors.light.primary,}}
-              name={focused ? "notifications" : "notifications-outline"}
-              color={color}
+                  : Colors.light.primary
+              }
               size={25}
             />
           ),
@@ -126,19 +167,22 @@ export default function TabsLayout() {
               colorScheme === "dark" ? Colors.dark.accent : Colors.light.accent,
           },
           headerTitle: "Profile",
-          headerTitleStyle:{
-            color:colorScheme === "dark" ? Colors.dark.primary : Colors.light.primary
-          
+          headerTitleStyle: {
+            color:
+              colorScheme === "dark"
+                ? Colors.dark.primary
+                : Colors.light.primary,
           },
 
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              style={{ marginBottom: -5, color:
+              style={{ marginBottom: -5 }}
+              name={!focused ? "reorder-three" : "reorder-three-outline"}
+              color={
                 colorScheme === "dark"
                   ? Colors.dark.primary
-                  : Colors.light.primary, }}
-              name={!focused ? "reorder-three" : "reorder-three-outline"}
-              color={color}
+                  : Colors.light.primary
+              }
               size={40}
             />
           ),
