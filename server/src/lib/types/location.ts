@@ -1,16 +1,16 @@
 export enum CountryEnum{
-    PAKISTAN="Pakistan",
+    PAKISTAN="pakistan",
 }
 
 
-export class ProvinceEnum{
-    PUNJAB = "punjab";
-    SINDH = "sindh";
-    KPK = "kpk";
+export enum ProvinceEnum{
+    PUNJAB = "punjab",
+    SINDH = "sindh",
+    KPK = "kpk",
 }
 
-export class CityEnum{
-    LAHORE = "lahore";
-    KARACHI = "karachi";
-    ISLAMABAD = "islamabad";
+export enum CityEnum{
+    LAHORE = "lahore",
+    KARACHI = "karachi",
+    ISLAMABAD = "islamabad",
 }

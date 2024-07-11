@@ -1,81 +1,135 @@
 import { ParentEntity } from "src/database/Parent.entity";
-import { Column, Entity, OneToOne, PrimaryGeneratedColumn } from "typeorm";
-import { v4 as uuid, } from 'uuid';
-import { AdminUser } from "./admin-user.entity";
-import { CreatorUser } from "./creator-user.entity";
-import { NormalUser } from "./normal-user.entity";
-import { SpecialUser } from "./special-user.entity";
+import { Column, Entity, JoinTable, ManyToMany,  OneToMany, OneToOne } from "typeorm";
+import { AdminUser } from "./user-admin.entity";
+import { CreatorUser } from "./user-creator.entity";
+import { NormalUser } from "./user-normal.entity";
+import { AuthProviderEnum, GenderEnum, UserRoleEnum } from "src/lib/types/user";
+import { Location } from "src/location/entities/location.entity";
+import { Post } from "src/post/entities/post.entity";
+import { PostComments } from "src/post/entities/post-comment.entity";
+import { UserBlockAssociation } from "./user-block-association.entity";
 
-
-@Entity()
+@Entity("users")
 export class User extends ParentEntity<User> {
-    @PrimaryGeneratedColumn('uuid',)
-    id: string;
+  @Column({ primary: true, type: "uuid" })
+  id: string;
 
-    @Column({nullable:true})
-    email:string
+  @Column({ nullable: true, type: "varchar", unique: true })
+  email: string;
 
-    @Column({nullable:true})
-    password:string
+  @Column({ nullable: true, type: "text" })
+  password: string;
 
-    @Column()
-    firstname:string
+  @Column({ type: "varchar" })
+  firstname: string;
 
-    @Column()
-    lastname:string
+  @Column({ type: "varchar" })
+  lastname: string;
 
-    @Column({})
-    gender:Gender
+  @Column({ nullable: true, type: "text" })
+  avatar_url: string;
 
-    @Column({})
-    age:number
+  @Column({ nullable: true, type: "int" })
+  age: number;
 
-    @Column({nullable:true})
-    phone:string
+  @Column({ nullable: true, type: "varchar" })
+  phone_number: string;
 
-    @Column({nullable:true})
-    avatar_url:string
+  @Column({ type: "enum", enum: GenderEnum })
+  gender: GenderEnum;
 
-    @Column()
-    auth_provider:AuthProvider
+  @Column({ type: "enum", enum: UserRoleEnum })
+  user_role: UserRoleEnum;
 
-    @Column()
-    user_role:UserRole
+  @Column({ type: "date" })
+  date_of_birth: Date;
 
-    @OneToOne(()=>AdminUser, adminUser=>adminUser.id)
-    admin_id:typeof uuid
+  @Column({ type: "enum", enum: AuthProviderEnum })
+  auth_provider: AuthProviderEnum;
 
-    @OneToOne(()=>CreatorUser, creatorUser=>creatorUser.id)
-    creator_id:typeof uuid
+  @Column({ default: false, type: "boolean" })
+  is_verified: boolean;
 
-    @OneToOne(()=>NormalUser, normalUser=>normalUser.id)
-    normal_user_id:typeof uuid
-    
-    @OneToOne(()=>SpecialUser, specialUser=>specialUser.id)
-    special_user_id:typeof uuid
+  @Column({ default: true, type: "boolean" })
+  is_active: boolean;
 
-    
+  @Column({ nullable: true, default: false, type: "boolean" })
+  is_special_user: boolean;
 
+  @Column({ nullable: true, type: "date" })
+  authorized_special_user_at: Date;
 
-    
+  @Column({ nullable: true, type: "uuid" })
+  authorized_special_user_by_creator_id: string;
 
-}
+  @Column({ nullable: true, type: "uuid" })
+  authorized_special_user_by_admin_id: string;
 
+  @OneToOne(() => Location, Location => Location.user_location)
+  location: Location;
 
-enum Gender{
-    MALE='male',
-    FEMALE='female'
-}
+  @OneToOne(() => AdminUser, adminUser => adminUser.user)
+  admin_user: AdminUser;
 
+  @OneToOne(() => CreatorUser, creatorUser => creatorUser.user)
+  creator_user: CreatorUser;
 
-enum AuthProvider{
-    LOCAL='local',
-    GOOGLE='google'
-}
+  @OneToOne(() => NormalUser, normalUser => normalUser.user)
+  normal_user: NormalUser;
 
-enum UserRole{
-    ADMIN='admin',
-    CREATOR='creator',
-    SPECIAL_USER='special_user',
-    NORMAL_USER='normal_user',
+  // user tagged in post relationship
+  @ManyToMany(() => Post, post => post.tagged_users)
+  @JoinTable({
+    name: "user_post_tagged_association",
+    joinColumn: {
+      name: "user_id",
+      referencedColumnName: "id",
+    },
+    inverseJoinColumn: {
+      name: "post_id",
+      referencedColumnName: "id",
+    },
+  })
+  tagged_posts: User[];
+
+  // user tagged in comment relationship
+  @ManyToMany(() => PostComments, comment => comment.tagged_users)
+  @JoinTable({
+    name: "user_post_comment_tagged_association",
+    joinColumn: {
+      name: "user_id",
+      referencedColumnName: "id",
+    },
+    inverseJoinColumn: {
+      name: "comment_id",
+      referencedColumnName: "id",
+    },
+  })
+  tagged_comments: User[];
+
+  
+
+  // user following relationship
+  @ManyToMany(() => User, user => user.following)
+  @JoinTable({
+    name: "user_following_association",
+    joinColumn: {
+      name: "user_id",
+      referencedColumnName: "id",
+    },
+    inverseJoinColumn: {
+      name: "following_id",
+      referencedColumnName: "id",
+    },
+  })
+  following: User[];
+  @ManyToMany(() => User, user => user.followers)
+  followers: User[];
+
+  // user block relationship
+ @OneToMany(()=>UserBlockAssociation,userBlockAssociation=>userBlockAssociation.blocked_to_users)
+  blocked_from_users:UserBlockAssociation[]
+
+  @OneToMany(()=>UserBlockAssociation,userBlockAssociation=>userBlockAssociation.blocked_from_users)
+  blocked_to_users:UserBlockAssociation[]
 }

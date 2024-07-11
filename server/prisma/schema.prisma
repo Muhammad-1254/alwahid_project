@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+model User {
+  id            String       @id @default(uuid())  @db.Uuid()
+  email         String       @unique
+  password      String?
+  firstname     String       @db.VarChar(80)
+  lastname      String       @db.VarChar(80)
+  avatar_url    String?      @db.Text()
+  age           Int          @db.Integer()
+  phone_number  String?      @db.VarChar(20)
+  gender        Gender
+  user_type     UserType
+  auth_provider AuthProvider
+  is_verified   Boolean      @default(false)
+  is_active     Boolean      @default(true)
+  is_special_user Boolean @default(false)
+  authroized_special_user_at DateTime?
+
+  authroized_special_user_by_creator_id String? @db.Uuid()
+  authroized_special_user_by_admin_id String @db.Uuid()
+
+  
+
+
+  admin_user   AdminUser?
+  creator_user CreatorUser?
+  normal_user  NormalUser?
+
+  location_id String?   @db.Uuid()
+  location    Location? @relation(fields: [location_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model AdminUser {
+  user_id String @id @db.Uuid()
+
+  creator_user_authroized CreatorUser[]
+  
+  posts                   Posts[]
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("admin_users")
+}
+
+model CreatorUser {
+  user_id String @id @db.Uuid()
+
+  authorized_at DateTime 
+  works_on      String   @db.VarChar(255)
+
+  qualification Qualification
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  authorized_admin_id String    @db.Uuid()
+  authorized_admin_by AdminUser @relation(fields: [authorized_admin_id], references: [user_id], onDelete: Cascade, onUpdate: Cascade)
+
+
+
+  work_location_id String   @db.Uuid()
+  work_location    Location @relation(fields: [work_location_id], references: [id], onUpdate: Cascade, onDelete: Cascade)
+
+  posts Posts[]
+
+  @@map("creator_users")
+}
+
+model NormalUser{
+  user_id String @id @db.Uuid()
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("normal_users")
+
+}
+
+
+
+
+
+
+model Location {
+  id       String @id @default(uuid())  @db.Uuid()
+  country  String @db.VarChar(50)
+  province String @db.VarChar(50)
+  city     String @db.VarChar(50)
+  zip_code String @db.VarChar(10)
+  address  String @db.VarChar(255)
+
+  creator_user_work_location CreatorUser[]
+  
+  user_location              User[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("locations")
+}
+
+model Posts {
+  id           String @id @default(uuid()) @db.Uuid()
+  text_content String @db.Text()
+
+  post_by UserType
+
+  post_medias PostMedia[]
+
+  creator_user_id String?      @db.Uuid()
+  creator_user    CreatorUser? @relation(fields: [creator_user_id], references: [user_id], onDelete: SetNull, onUpdate: Cascade)
+
+
+  admin_user_id String?    @db.Uuid()
+  admin_user    AdminUser? @relation(fields: [admin_user_id], references: [user_id], onDelete: SetNull, onUpdate: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("posts")
+}
+
+model PostMedia {
+  id        String @id @default(uuid()) @db.Uuid()
+  media_url String @db.Text()
+  url       String @db.Text()
+
+  type PostMediaType
+
+  post_id String? @db.Uuid()
+  post    Posts?  @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("post_medias")
+}
+
+
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum UserType {
+  admin
+  creator
+  special_user
+  normal_user
+}
+
+enum AuthProvider {
+  email
+  phone
+  google
+  facebook
+}
+
+enum Qualification {
+  graduated
+  student
+  teacher
+  other
+}
+
+enum PostMediaType {
+  image
+  video
+  audio
+  document
+}
