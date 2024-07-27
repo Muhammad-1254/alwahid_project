@@ -41,7 +41,7 @@ export class User extends ParentEntity<User> {
   @Column({ type: "enum", enum: UserRoleEnum })
   user_role: UserRoleEnum;
 
-  @Column({ type: "date" })
+  @Column({nullable:true, type: "date" })
   date_of_birth: Date;
 
   @Column({ type: "enum", enum: AuthProviderEnum })
@@ -90,7 +90,7 @@ export class User extends ParentEntity<User> {
       referencedColumnName: "id",
     },
   })
-  tagged_posts: User[];
+  tagged_posts: Post[];
 
   // user tagged in comment relationship
   @ManyToMany(() => PostComments, comment => comment.tagged_users)

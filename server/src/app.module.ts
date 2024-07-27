@@ -7,6 +7,7 @@ import { UserModule } from "./user/user.module";
 import { MyLoggerModule } from './my-logger/my-logger.module';
 import { PostModule } from "./post/post.module";
 import { HashtagModule } from './hashtag/hashtag.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { HashtagModule } from './hashtag/hashtag.module';
     MyLoggerModule,
     PostModule,
     HashtagModule,
+    AuthModule,
 
     // ThrottlerModule.forRoot([
     //   {

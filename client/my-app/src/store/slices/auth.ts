@@ -1,54 +1,99 @@
-import { supabase } from "@/src/lib/supabase";
-import { buildCreateSlice, createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Session, User } from "@supabase/supabase-js";
-import { act } from "react-test-renderer";
+import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
+import cAxios from "../../lib/cAxios";
 
 
+type UserDataProps = {
+  userId: string | null;
+  email?: string;
+  firstname: string | null;
+  lastname: string | null;
+  avatar?: string;
+  age?: number;
+  phoneNumber?: string;
+  gender: string | null;
+  role: string | null;
+  dob?: string;
+  authProvider: string | null;
+  isVerified: boolean | null;
+  isSpecialUser: boolean | null;
 
-type authSliceType={
-    session:Session | null;
-    user:User | null;   
-    isAuthenticated:boolean;
+};
+type AuthInitialStateProps={
+  data: UserDataProps;
+  isAuthenticated: boolean;
+  loading: boolean;
+  error: string | null;
+
 }
-
-const initialState:authSliceType={
-    session:null,
-    user:null,
-    isAuthenticated:false
+export const userDataInitialState:UserDataProps={
+  userId: null,
+  firstname: null,
+  lastname: null,
+  isVerified: false,
+  isSpecialUser: false,
+  role: "hello",
+  gender: null,
+  authProvider: null
 }
+export const authInitialState:AuthInitialStateProps= {
+  data:userDataInitialState,
+  isAuthenticated: false,
+  loading: false,
+  error: null,
+};
 
+export const getUser = createAsyncThunk(
+  "getUser",
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await cAxios.get("/user/protected");
+      console.log("res data after getUser", res.data)
+      return res.data;
+    } catch (error: any) {
+      console.error("error from getUser", error);
+      // Check if it's an AxiosError and handle accordingly
+      if (error.response) {
+        return rejectWithValue(error.response.data);
+      } else if (error.request) {
+        return rejectWithValue("No response received from the server");
+      } else {
+        return rejectWithValue(error.message);
+      }
+    }
+  }
+);
 
-export const fetchSession = createAsyncThunk('auth/fetchSession', async () => {
-    const {data:{session}} = await supabase.auth.getSession();
-    return session;
-})
-
-export const signInAnonymously = createAsyncThunk("auth/signInAnonymously", async () => {
-    await supabase.auth.signInAnonymously() ;
-});
 const authSlice = createSlice({
-    name: "auth",
-    initialState:{value:initialState},
-    reducers: {
-       setSession:(state, action: PayloadAction<Session|null>)=>{
-        state.value.session = action.payload;
-        state.value.user = action.payload?.user || null;
-        state.value.isAuthenticated = !!action.payload?.user && !action.payload.user.is_anonymous;
-
-       }
-        },
-    extraReducers:(builder) =>{
-        builder.addCase(fetchSession.fulfilled,(state,action)=>{
-            state.value.session = action.payload;
-            state.value.user = action.payload?.user || null;
-            state.value.isAuthenticated = !!action.payload?.user && !action.payload.user.is_anonymous;
-    
-        });
-      
+  name: "auth",
+  initialState :authInitialState,
+  reducers: {
+    setUser: (state, action: PayloadAction<UserDataProps>) => {
+      state.data = action.payload;
     },
-    
+    setIsAuthenticated: (state, action: PayloadAction<boolean>) => {
+      state.isAuthenticated = action.payload;
+    },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(getUser.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    });
+    builder.addCase(getUser.fulfilled, (state, action) => {
+      state.data = action.payload;
+      state.isAuthenticated = true;
+      state.loading = false;
+      state.error = null;
+      console.log("checking user data from slice: ",state.data.email)
+
+    });
+    builder.addCase(getUser.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload as string;
+    });
+  },
 });
 
-export const { setSession } = authSlice.actions;
+export const { setUser, setIsAuthenticated } = authSlice.actions;
 
 export default authSlice.reducer;

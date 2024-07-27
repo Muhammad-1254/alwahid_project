@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Request, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
 import {  CreateUserAdminUserDTO, CreateUserApprovedCreatorUserDTO, CreateUserCreatorUserRequestAdminDTO,  CreateUserDto, createUserLocationDTO } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserRoleEnum } from 'src/lib/types/user';
+import { JwtAccessTokenGuard } from 'src/auth/guards/jwt-access-token.guard';
 
 @Controller('user')
 export class UserController {
@@ -33,14 +34,33 @@ export class UserController {
     return this.userService.createUserLocation(createUserLocation);
     
   }
+  @UseGuards(JwtAccessTokenGuard)
+  @Post("follow")
+  followToAnotherUser(@Request() req, @Query("follow_to") follow_to:string){
+    return this.userService.followToAnotherUser(req.user.userId,follow_to)
+  }
   @Get()
   findAll() {
     return this.userService.findAllUsers();
   }
-
+  @UseGuards(JwtAccessTokenGuard)
+  @Get("/protected")
+  findProtectedUser(@Request() req){
+    console.log('req.user',req.user)
+    return this.userService.findOne(req.user.userId)
+  }
+  @UseGuards(JwtAccessTokenGuard)
+  @Get("get-similar-friend-zone-by-name")
+  findSimilarFriendsZoneByName(@Request() req,@Query("name") name:string){
+    return this.userService.findSimilarFriendsZoneByName(name,req.user.userId)
+  }
+  @Get("get-user-followers")
+  getUserFollowers(@Query("user_id") user_id:string){
+    return this.userService.getUserFollowers(user_id)
+  }
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.userService.findOne(+id);
+    return this.userService.findOne(id);
   }
 
   @Patch(':id')

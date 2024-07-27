@@ -19,3 +19,11 @@ export enum UserRoleEnum{
 export enum QualificationEnum{
     GRADUATED='graduated'
 }
+
+
+
+export type JwtAuthGuardTrueType={
+    username:string,
+        userId:string,
+        userRole:UserRoleEnum
+}

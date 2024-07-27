@@ -1,37 +1,43 @@
-import { IsArray, IsEnum, IsNotEmpty, IsString, IsUUID } from "class-validator";
-import { PostLikeEnum, PostLikeTargetEnum, PostMediaEnum, PostUserTypeEnum } from "src/lib/types/post";
+import { IsArray, IsEnum, IsNotEmpty, IsNumber, IsString, IsUUID } from "class-validator";
+import { PostLikeEnum, PostLikeTargetEnum, } from "src/lib/types/post";
 
 export class CreatePostDto {
     @IsString()
-    text_content?: string;
-
-    @IsNotEmpty()
-    @IsEnum(PostUserTypeEnum,{message:`valid user role required!. i.e ${PostUserTypeEnum.ADMIN} or ${PostUserTypeEnum.CREATOR}`})
-    post_by: PostUserTypeEnum;
-
-    @IsUUID("4")
-    creator_user_id?: string;
-
-    @IsUUID("4")
-    admin_user_id?: string;   
+    textContent?: string;
 
     @IsArray()
     postMedias:PostMediaDto[]
     
+   
 }
+
+export class CreatePresignedUrlDto{
+    @IsNotEmpty()
+    @IsString()
+    fileName:string
+
+    @IsNotEmpty()
+    @IsString()
+    mimeType:string
+    
+    @IsNotEmpty()
+    @IsNumber()
+    size:number
+}
+
 class PostMediaDto{
     @IsNotEmpty()
     @IsString()
-    url:string
-
+    urlKey:string
+    
     @IsNotEmpty()
-    @IsEnum(PostMediaEnum,{message:`valid post type required!.`})
-    post_type:PostMediaEnum
+    @IsString()
+    mimeType:string
 }
 export class CreatePostMediaDto{
     @IsNotEmpty()
     @IsUUID("4")
-    post_id:string
+    postId:string
 
     @IsArray()
     postMedias:PostMediaDto[]
@@ -44,31 +50,31 @@ export class CreatePostCommentDto{
 
     @IsNotEmpty({message:"user id is required!"})
     @IsUUID("4")
-    user_id:string
+    userId:string
 
     @IsNotEmpty({message:"post id is required!"})
     @IsUUID("4")
-    post_id:string
+    postId:string
 }
 
 export class createPostOrCommentLikeDto{
     @IsNotEmpty()
     @IsEnum(PostLikeTargetEnum,{message:`valid target type required!. i.e ${PostLikeTargetEnum.POST} or ${PostLikeTargetEnum.COMMENT}`})
-    target_type:PostLikeTargetEnum
+    targetType:PostLikeTargetEnum
 
     @IsNotEmpty()
     @IsEnum(PostLikeEnum,{message:`valid like type required!`})
-    like_type:PostLikeEnum
+    likeType:PostLikeEnum
 
     @IsNotEmpty()
     @IsUUID("4")
-    user_id:string
+    userId:string
 
     @IsUUID("4")
-    post_id?:string
+    postId?:string
 
     @IsUUID("4")
-    comment_id?:string
+    commentId?:string
 
 
 

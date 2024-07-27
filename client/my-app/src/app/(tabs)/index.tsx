@@ -31,13 +31,18 @@ import {
   TPostUserComments,
   TPostUserLikes,
 } from "@/src/store/slices/postData";
+import { useAppSelector } from "@/src/hooks/redux";
 export default function Home() {
+  const auth = useAppSelector(state=>state.auth)
+  console.log({auth})
   const dispatch = useDispatch();
   useEffect(() => {
     dispatch(setHomePageData(homePageData));
   }, []);
+
   return (
     <View className="bg-background dark:bg-backgroundDark flex-1 items-center justify-normal gap-y-4 ">
+       
       <FlatList
         className="w-full  py-4 "
         data={homePageData}

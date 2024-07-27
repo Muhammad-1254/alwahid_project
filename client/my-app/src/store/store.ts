@@ -1,18 +1,43 @@
-import { configureStore } from "@reduxjs/toolkit";
+import { combineReducers, configureStore, } from "@reduxjs/toolkit";
 import mixReducer from "./slices/mix";
 import authReducer from "./slices/auth";
 import postDataReducer from "./slices/postData";
-import chatScreenReducer from "./slices/chatScreenData";
+import NewPostReducer from "./slices/addPost";
 
-export const store = configureStore({
-  reducer: {
-    mix: mixReducer,
+import chatScreenReducer from "./slices/chatScreenData";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {persistStore,persistReducer} from "redux-persist";
+
+const rootReducer= combineReducers({
+  mix: mixReducer,
     auth: authReducer,
     postDetail:postDataReducer,
+    newPost:NewPostReducer,
     chatScreen:chatScreenReducer,
+})
 
-  },
-});
+const persistConfig = {
+  key: 'root',
+  storage: AsyncStorage,
+  // whitelist: ['auth'],
+  blacklist: ['newPost','auth']
+};
+
+const persistedReducer = persistReducer(persistConfig, rootReducer);
+
+export const store = configureStore({
+  reducer: persistedReducer,
+  middleware: (getDefaultMiddleware) =>{
+    return getDefaultMiddleware({
+      serializableCheck: {
+        ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
+        ignoredPaths: ['register', 'rehydrate'],      }
+    })
+  
+  }
+})
+export const persistor = persistStore(store);
+
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

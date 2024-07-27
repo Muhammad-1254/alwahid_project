@@ -1,26 +1,53 @@
-import { Injectable } from '@nestjs/common';
-import { CreateHashtagDto } from './dto/create-hashtag.dto';
-import { UpdateHashtagDto } from './dto/update-hashtag.dto';
+import { Injectable } from "@nestjs/common";
+import { CreateHashtagDto } from "./dto/create-hashtag.dto";
+import { EntityManager, Like, Repository } from "typeorm";
+import { Hashtag } from "./entities/hashtag.entity";
+import { v4 as uuid } from "uuid";
+import { InjectRepository } from "@nestjs/typeorm";
+import { HashtagPostAssociation } from "./entities/hashtag-post-association.entity";
 
 @Injectable()
 export class HashtagService {
-  create(createHashtagDto: CreateHashtagDto) {
-    return 'This action adds a new hashtag';
+  constructor(
+    private readonly entityManager: EntityManager,
+    @InjectRepository(Hashtag)
+    private readonly repository: Repository<Hashtag>,
+  ) {}
+  async create(createHashtagDto: CreateHashtagDto) {
+    const hashtag = new Hashtag({ id: uuid(), ...createHashtagDto });
+    await this.entityManager.save(hashtag);
+  }
+  async createHashtagPostAssociation(postId: string, hashtagId: string) {
+    const association = new HashtagPostAssociation({
+      hashtag_id: hashtagId,
+      post_id: postId,
+    })
+    await this.entityManager.save(association);
   }
 
-  findAll() {
-    return `This action returns all hashtag`;
+  async findSimilarByName(name: string) {
+    const data = []
+    const hashtags = await this.entityManager.find(Hashtag, {
+      where: {
+        name: Like(`%${name}%`),
+      },
+      take: 10,
+    });
+    for(let i = 0; i < hashtags.length; i++) {
+      const count = await this.entityManager.count(HashtagPostAssociation,{
+        where:{
+          hashtag_id:hashtags[i].id,
+        }
+        })
+      data.push({hashtag:hashtags[i],count})
+    }
+   return data
   }
-
-  findOne(id: number) {
+  findById(id: number) {
     return `This action returns a #${id} hashtag`;
   }
 
-  update(id: number, updateHashtagDto: UpdateHashtagDto) {
-    return `This action updates a #${id} hashtag`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} hashtag`;
+  async remove(id: string) {
+    await this.repository.delete(id);
   }
 }

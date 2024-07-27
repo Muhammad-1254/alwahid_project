@@ -10,6 +10,7 @@
     "arrowParens": "avoid",
     "endOfLine": "lf",
     "proseWrap": "preserve",
-    "quoteProps": "as-needed"
+    "quoteProps": "as-needed",
+    "no-unused-vars": "off"
   }
   

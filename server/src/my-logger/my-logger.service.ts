@@ -34,4 +34,12 @@ export class MyLoggerService extends ConsoleLogger {
         this.logToFile(entry);
         super.error(message, stackOrContext);
     }  
+    warn(message: any, context?: string){
+        const entry = `${context}\t${message}`;
+        this.logToFile(entry);
+        super.warn(message, context);
+        
+    }
+    
+    
 } 

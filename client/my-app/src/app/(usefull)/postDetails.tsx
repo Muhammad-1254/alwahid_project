@@ -92,7 +92,7 @@ w-full h-20   flex-row items-center justify-between px-4 "
   );
 }
 
-const MediaSlider = ({ media }: { media: TPostMedia }) => {
+export const MediaSlider = ({ media }: { media: TPostMedia }) => {
   const [video, setVideo] = useState<{present:boolean, url:string[]}>({present:false, url:[]})
   
   

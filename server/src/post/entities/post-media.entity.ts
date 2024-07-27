@@ -13,8 +13,8 @@ export class PostMedia {
     @Column({ primary: true, type: "uuid" })
     id:string
 
-    @Column({ type: "enum",enum:PostMediaEnum })
-    post_type:PostMediaEnum
+    @Column({ type: "text",})
+    mime_type:string
 
     @Column({ type: "text" })
     url:string

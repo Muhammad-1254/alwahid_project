@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Alert, View, TextInput, Text, Pressable, ScrollView } from "react-native";
-import { supabase } from "../../lib/supabase";
 import { Link } from "expo-router";
 import Checkbox from "expo-checkbox";
 enum Gender {
@@ -50,24 +49,24 @@ export default function SignUp() {
 
 
     setLoading(true);
-    const {
-      data: { session },
-      error,
-    } = await supabase.auth.signUp({
-      email: user.email,
-      password: user.password,
-      options: {
-        data: {
-          first_name: user.firstname,
-          last_name: user.lastname,
-          gender: user.gender,
-          age:user.age
-        },
-      },
-    });
+    // const {
+    //   data: { session },
+    //   error,
+    // } = await supabase.auth.signUp({
+    //   email: user.email,
+    //   password: user.password,
+    //   options: {
+    //     data: {
+    //       first_name: user.firstname,
+    //       last_name: user.lastname,
+    //       gender: user.gender,
+    //       age:user.age
+    //     },
+    //   },
+    // });
 
-    if (error) Alert.alert(error.message);
-    else if (!session)
+    // if (error) Alert.alert(error.message);
+    // else if (!session)
       Alert.alert("Please check your inbox for email verification!");
     setLoading(false);
   }

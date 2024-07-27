@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import {
   CreateUserAdminUserDTO,
   CreateUserApprovedCreatorUserDTO,
@@ -16,6 +16,7 @@ import { UpdateUserDto } from "./dto/update-user.dto";
 import { Location } from "src/location/entities/location.entity";
 import { UserRoleEnum } from "src/lib/types/user";
 import { AdminUser } from "./entities/user-admin.entity";
+import { userDataResponse } from "src/lib/utils";
 
 @Injectable()
 export class UserService {
@@ -24,13 +25,17 @@ export class UserService {
     private readonly userRepository: Repository<User>,
     private readonly entityManager: EntityManager,
   ) {}
-  
+
   async createUserNormalUser(createUser: CreateUserDto) {
     const user_id = uuid();
     const normalUser = new NormalUser({
       ...createUser,
       user_id,
-      user: new User({ ...createUser,user_role:UserRoleEnum.NORMAL, id: user_id }),
+      user: new User({
+        ...createUser,
+        user_role: UserRoleEnum.NORMAL,
+        id: user_id,
+      }),
     });
 
     await this.entityManager.save(normalUser);
@@ -81,16 +86,19 @@ export class UserService {
     const location = new Location({
       id: location_id,
       work_user_id: createUser.user_id,
-      ...createUser.work_location
+      ...createUser.work_location,
     });
-    await this.entityManager.transaction(async entityManager=>{
-    await entityManager.save(creatorUser);
-    await this.entityManager.save(location);
+    await this.entityManager.transaction(async entityManager => {
+      await entityManager.save(creatorUser);
+      await this.entityManager.save(location);
 
-    // now updating the user role in user table
-    await entityManager.update(User,{id:createUser.user_id},{user_role:UserRoleEnum.CREATOR})
-    })
-   
+      // now updating the user role in user table
+      await entityManager.update(
+        User,
+        { id: createUser.user_id },
+        { user_role: UserRoleEnum.CREATOR },
+      );
+    });
 
     return { message: "Creator created successfully", data: createUser };
   }
@@ -100,7 +108,11 @@ export class UserService {
     const adminUser = new AdminUser({
       ...createUser,
       user_id,
-      user: new User({ ...createUser,user_role:UserRoleEnum.ADMIN, id: user_id }),
+      user: new User({
+        ...createUser,
+        user_role: UserRoleEnum.ADMIN,
+        id: user_id,
+      }),
     });
     await this.entityManager.save(adminUser);
     return { message: "Admin created successfully", data: adminUser };
@@ -117,12 +129,59 @@ export class UserService {
     return { message: "Location created successfully", data: location };
   }
 
+  async followToAnotherUser(userId:string, followUserId:string){
+    const user = await this.entityManager.findOne(User,{where:{id:userId}})
+    const followUser = await this.entityManager.findOne(User,{where:{id:followUserId}})
+    if(!user || !followUser){
+      throw new NotFoundException("User not found")
+    }
+    if(user.id === followUser.id){
+      throw new BadRequestException("You can't follow yourself")
+    }
+    if(user.following){
+      user.following.push(followUser)
+    }else{
+      user.following = [followUser]
+    }
+    
+    await this.entityManager.save(user)
+    return {message:"Followed successfully"}
+  }
   findAllUsers() {
     return this.userRepository.find();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  async findOne(id: string) {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) throw new NotFoundException("User not found");
+    return userDataResponse(user);
+  }
+  async findSimilarFriendsZoneByName(name: string, userId: string) {
+    const data = [];
+    const user = await this.entityManager.findOne(User, {
+      where: { id: userId },
+    });
+    user.following &&user.following.forEach(item => {
+      if (item.firstname.includes(name) || item.lastname.includes(name)) {
+        data.push(item);
+      }
+    });
+    user.followers&&user.followers.forEach(item => {
+      if (item.firstname.includes(name) || item.lastname.includes(name)) {
+        data.push(item);
+      }
+    });
+    return data
+  }
+
+    async getUserFollowers(userId:string){
+    const user = await this.entityManager.findOne(User,{where:{id:userId},relations:['normal_user']})
+    if(!user){
+      throw new NotFoundException("User not found")
+    }
+    console.log(user)
+
+    return user
   }
 
   update(id: number, updateUserDto: UpdateUserDto) {
@@ -134,20 +193,25 @@ export class UserService {
   }
 
   async deleteUser(user_id: string, role: UserRoleEnum) {
-    let userToDelete:any
-    if(role===UserRoleEnum.NORMAL){
+    let userToDelete: any;
+    if (role === UserRoleEnum.NORMAL) {
       userToDelete = await this.entityManager.delete(User, { id: user_id });
-    }else if(role === UserRoleEnum.CREATOR){
+    } else if (role === UserRoleEnum.CREATOR) {
       userToDelete = await this.entityManager.delete(CreatorUser, { user_id });
-    }else if(role === UserRoleEnum.ADMIN){
+    } else if (role === UserRoleEnum.ADMIN) {
       userToDelete = await this.entityManager.delete(AdminUser, { user_id });
     }
     if (!userToDelete) {
       return { message: "User not found" };
     }
 
+    return { message: "User deleted successfully", data: userToDelete };
+  }
 
-
-    return { message: "User deleted successfully" ,data:userToDelete};
+  async findOneWithEmail(email: string) {
+    return await this.userRepository.findOne({ where: { email } });
+  }
+  async findOneWithPhoneNumber(phone_number: string) {
+    return await this.userRepository.findOne({ where: { phone_number } });
   }
 }
