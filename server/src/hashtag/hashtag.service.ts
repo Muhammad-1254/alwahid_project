@@ -19,8 +19,8 @@ export class HashtagService {
   }
   async createHashtagPostAssociation(postId: string, hashtagId: string) {
     const association = new HashtagPostAssociation({
-      hashtag_id: hashtagId,
-      post_id: postId,
+      hashtagId: hashtagId,
+      postId: postId,
     })
     await this.entityManager.save(association);
   }
@@ -36,7 +36,7 @@ export class HashtagService {
     for(let i = 0; i < hashtags.length; i++) {
       const count = await this.entityManager.count(HashtagPostAssociation,{
         where:{
-          hashtag_id:hashtags[i].id,
+          hashtagId:hashtags[i].id,
         }
         })
       data.push({hashtag:hashtags[i],count})

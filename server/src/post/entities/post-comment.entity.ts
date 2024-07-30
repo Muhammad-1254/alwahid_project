@@ -4,7 +4,7 @@ import { PostCommentLike } from "./post-comment-like.entity";
 import { ParentEntity } from "src/database/Parent.entity";
 import { User } from "src/user/entities/user.entity";
 
-@Entity("posts_comments")
+@Entity("postComments")
 export class PostComments extends ParentEntity<PostComments>{
    
 
@@ -15,25 +15,28 @@ export class PostComments extends ParentEntity<PostComments>{
     content: string;
 
     @Column({ type: "uuid" })
-    user_id: string;
+    userId: string;
+    @ManyToOne(()=>User,user=>user.id)
+    @JoinColumn({name:"userId"})
+    user:User
 
 
     @Column({nullable:true, type:'uuid'})
-    post_id:string;
+    postId:string;
     @ManyToOne(()=>Post,post=>post.postComments,{
         onDelete:"CASCADE",
         onUpdate:'CASCADE',
         eager:true,
         cascade:true
     })
-    @JoinColumn({name:"post_id"})
+    @JoinColumn({name:"postId"})
     post:Post
 
     @OneToMany(()=>PostCommentLike,postCommentLike=>postCommentLike.comment)
     commentLikes:PostCommentLike[]
 
-    @ManyToMany(()=>User,user=>user.tagged_comments)
-    tagged_users:User[]
+    @ManyToMany(()=>User,user=>user.taggedComments)
+    taggedUsers:User[]
 
  
 }

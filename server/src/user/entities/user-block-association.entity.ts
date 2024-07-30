@@ -2,14 +2,14 @@ import { ParentEntity } from "src/database/Parent.entity";
 import { Column, Entity, JoinColumn, ManyToOne } from "typeorm";
 import { User } from "./user.entity";
 
-@Entity("user_block_association")
+@Entity("userBlockAssociation")
 export class UserBlockAssociation extends ParentEntity<UserBlockAssociation>{
     
     @Column({ primary: true, type: "uuid" })
-    user_id:string
+    userId:string
 
     @Column({ primary: true, type: "uuid" })
-    blocked_user_id:string
+    blockedUserId:string
 
     @Column({ type: "text" })
     reason: string;
@@ -17,20 +17,20 @@ export class UserBlockAssociation extends ParentEntity<UserBlockAssociation>{
     @Column({ type: "text" })
     description: string;
 
-    @ManyToOne(()=>User, user=>user.blocked_from_users,{
+    @ManyToOne(()=>User, user=>user.blockedFromUsers,{
         cascade:true,
         onDelete:"CASCADE",
         onUpdate:"CASCADE",
     })
-    @JoinColumn({name:"blocked_user_id"},)
-    blocked_to_users:User
+    @JoinColumn({name:"blockedUserId"},)
+    blockedToUsers:User
     
-    @ManyToOne(()=>User, user=>user.blocked_to_users,{
+    @ManyToOne(()=>User, user=>user.blockedToUsers,{
         cascade:true,
         onDelete:"CASCADE",
         onUpdate:"CASCADE",
     })
-    @JoinColumn({name:"user_id"})
-    blocked_from_users:User
+    @JoinColumn({name:"userId"})
+    blockedFromUsers:User
     
 }

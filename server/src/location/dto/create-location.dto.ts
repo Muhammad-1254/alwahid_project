@@ -20,7 +20,7 @@ export class CreateLocationDTO{
   
     @IsNotEmpty()
     @IsString({message:"Zip code required!"})
-    zip_code:string
+    zipCode:string
   
     @IsNotEmpty()
     @IsString({message:"Street address required!"})

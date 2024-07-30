@@ -8,27 +8,27 @@ import {
 import { Hashtag } from "./hashtag.entity";
 import { Post } from "src/post/entities/post.entity";
 
-@Entity("hashtag_post_association")
+@Entity("hashtagPostAssociation")
 export class HashtagPostAssociation extends ParentEntity<HashtagPostAssociation> {
   @Column({ primary: true, type: "uuid" })
-  hashtag_id: string;
+  hashtagId: string;
 
   @Column({ primary: true, type: "uuid" })
-  post_id: string;
+  postId: string;
 
-  @ManyToOne(() => Hashtag, hashtag => hashtag.post_hashtag, {
+  @ManyToOne(() => Hashtag, hashtag => hashtag.postHashtag, {
     cascade: true,
     onDelete: "CASCADE",
     onUpdate: "CASCADE",
   })
-  @JoinColumn({ name: "hashtag_id" })
+  @JoinColumn({ name: "hashtagId" })
   hashtag: Hashtag;
 
-  @ManyToOne(() => Post, post => post.post_hashtag, {
+  @ManyToOne(() => Post, post => post.postHashtag, {
     cascade: true,
     onDelete: "CASCADE",
     onUpdate: "CASCADE",
   })
-  @JoinColumn({ name: "post_id" })
+  @JoinColumn({ name: "postId" })
   post: Post;
 }

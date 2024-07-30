@@ -20,33 +20,33 @@ export class Location extends ParentEntity<Location> {
     city: CityEnum
 
     @Column()
-    zip_code:string
+    zipCode:string
 
     @Column()
     street:string
 
     @Column({nullable:true,type:'uuid'})
-    work_user_id:string
+    workUserId:string
 
-    @OneToOne(()=>CreatorUser,creatorUser=>creatorUser.work_location,{
+    @OneToOne(()=>CreatorUser,creatorUser=>creatorUser.workLocation,{
         cascade:true,
         onDelete:'CASCADE',
         onUpdate:'CASCADE',
     })
-    @JoinColumn({name:'work_user_id'})
-    creator_work_location:CreatorUser
+    @JoinColumn({name:'workUserId'})
+    creatorWorkLocation:CreatorUser
 
 
     @Column({nullable:true,type:'uuid'})
-    user_id:string
+    userId:string
 
     @OneToOne(()=>User,user=>user.location,{
         cascade:true,
         onDelete:'CASCADE',
         onUpdate:'CASCADE',
     })
-    @JoinColumn({name:'user_id'})
-    user_location:User
+    @JoinColumn({name:'userId'})
+    userLocation:User
 
     
 

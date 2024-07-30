@@ -9,6 +9,7 @@ export class JwtAccessTokenStrategy extends PassportStrategy(Strategy,"jwt-acces
             secretOrKey: `${process.env.JWT_SECRET}`
         })}
     async validate(payload: any){
+        console.log("JWT Access Token Strategy")
         console.log({payload})
         return { username: payload.username, userId:payload.sub.userId, userRole:payload.sub.userRole };
     }

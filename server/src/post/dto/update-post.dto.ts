@@ -14,7 +14,7 @@ export class UpdatePostDto extends PartialType(CreatePostDto) {
 export class UpdatePostContentDto  {
     @IsNotEmpty()
     @IsUUID('4')
-    post_id:string
+    postId:string
     
     @IsNotEmpty()
     @IsString()
@@ -25,11 +25,11 @@ export class UpdatePostContentDto  {
 export class updatePostCommentContentDto  {
     @IsNotEmpty()
     @IsUUID('4')
-    post_id:string
+    postId:string
     
     @IsNotEmpty()
     @IsUUID('4')
-    comment_id:string
+    commentId:string
 
     @IsNotEmpty()
     @IsString()

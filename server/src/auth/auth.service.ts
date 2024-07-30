@@ -29,17 +29,17 @@ export class AuthService {
       username: user.email,
       sub: {
         userId: user.id,
-        userRole: user.user_role,
+        userRole: user.userRole,
       },
     };
    
     return {
       user: userDataResponse(user),
-      access_token:this.jwtService.sign(payload, {
+      accessToken:this.jwtService.sign(payload, {
         expiresIn: `${process.env.JWT_TOKEN_EXPIRY}`,
         secret: `${process.env.JWT_SECRET}`,
       }),
-      refresh_token: this.jwtService.sign(payload, {
+      refreshToken: this.jwtService.sign(payload, {
         expiresIn: `${process.env.JWT_REFRESH_TOKEN_EXPIRY}`,
         secret: `${process.env.JWT_SECRET}`,
       }),
@@ -51,16 +51,16 @@ export class AuthService {
       username: user.email,
       sub: {
         userId: user.id,
-        userRole: user.user_role,
+        userRole: user.userRole,
       },
     };
 
     return {
-      access_token: this.jwtService.sign(payload, {
+      accessToken: this.jwtService.sign(payload, {
         secret: `${process.env.JWT_SECRET}`,
         expiresIn: `${process.env.JWT_TOKEN_EXPIRY}`,
       }),
-      refresh_token: this.jwtService.sign(payload, {
+      refreshToken: this.jwtService.sign(payload, {
         secret: `${process.env.JWT_SECRET}`,
         expiresIn: `${process.env.JWT_REFRESH_TOKEN_EXPIRY}`,
       }),

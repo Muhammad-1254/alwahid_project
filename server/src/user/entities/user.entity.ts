@@ -27,109 +27,104 @@ export class User extends ParentEntity<User> {
   lastname: string;
 
   @Column({ nullable: true, type: "text" })
-  avatar_url: string;
+  avatarUrl: string;
 
   @Column({ nullable: true, type: "int" })
   age: number;
 
   @Column({ nullable: true, type: "varchar" })
-  phone_number: string;
+  phoneNumber: string;
 
   @Column({ type: "enum", enum: GenderEnum })
   gender: GenderEnum;
 
   @Column({ type: "enum", enum: UserRoleEnum })
-  user_role: UserRoleEnum;
+  userRole: UserRoleEnum;
 
   @Column({nullable:true, type: "date" })
-  date_of_birth: Date;
+  dateOfBirth: Date;
 
   @Column({ type: "enum", enum: AuthProviderEnum })
-  auth_provider: AuthProviderEnum;
+  authProvider: AuthProviderEnum;
 
   @Column({ default: false, type: "boolean" })
-  is_verified: boolean;
+  isVerified: boolean;
 
   @Column({ default: true, type: "boolean" })
-  is_active: boolean;
+  isActive: boolean;
 
   @Column({ nullable: true, default: false, type: "boolean" })
-  is_special_user: boolean;
+  isSpecialUser: boolean;
 
   @Column({ nullable: true, type: "date" })
-  authorized_special_user_at: Date;
+  authorizedSpecialUserAt: Date;
 
   @Column({ nullable: true, type: "uuid" })
-  authorized_special_user_by_creator_id: string;
+  authorizedSpecialUserByCreatorId: string;
 
   @Column({ nullable: true, type: "uuid" })
-  authorized_special_user_by_admin_id: string;
+  authorizedSpecialUserByAdminId: string;
 
-  @OneToOne(() => Location, Location => Location.user_location)
+  @OneToOne(() => Location, Location => Location.userLocation)
   location: Location;
 
   @OneToOne(() => AdminUser, adminUser => adminUser.user)
-  admin_user: AdminUser;
+  adminUser: AdminUser;
 
   @OneToOne(() => CreatorUser, creatorUser => creatorUser.user)
-  creator_user: CreatorUser;
+  creatorUser: CreatorUser;
 
   @OneToOne(() => NormalUser, normalUser => normalUser.user)
-  normal_user: NormalUser;
+  normalUser: NormalUser;
 
   // user tagged in post relationship
-  @ManyToMany(() => Post, post => post.tagged_users)
+  @ManyToMany(() => Post, post => post.taggedUsers)
   @JoinTable({
-    name: "user_post_tagged_association",
+    name: "userPostTaggedAssociation",
     joinColumn: {
-      name: "user_id",
+      name: "userId",
       referencedColumnName: "id",
     },
     inverseJoinColumn: {
-      name: "post_id",
+      name: "postId",
       referencedColumnName: "id",
     },
   })
-  tagged_posts: Post[];
+  taggedPosts: Post[];
 
   // user tagged in comment relationship
-  @ManyToMany(() => PostComments, comment => comment.tagged_users)
+  @ManyToMany(() => PostComments, comment => comment.taggedUsers)
   @JoinTable({
-    name: "user_post_comment_tagged_association",
+    name: "userPostCommentTaggedAssociation",
     joinColumn: {
-      name: "user_id",
+      name: "userId",
       referencedColumnName: "id",
     },
     inverseJoinColumn: {
-      name: "comment_id",
+      name: "commentId",
       referencedColumnName: "id",
     },
   })
-  tagged_comments: User[];
+  taggedComments: User[];
 
   
 
   // user following relationship
-  @ManyToMany(() => User, user => user.following)
+  @ManyToMany(() => User, user => user.followers)
   @JoinTable({
-    name: "user_following_association",
-    joinColumn: {
-      name: "user_id",
-      referencedColumnName: "id",
-    },
-    inverseJoinColumn: {
-      name: "following_id",
-      referencedColumnName: "id",
-    },
+      name: "userFollowingAssociation",
+      joinColumn: { name: "userId", referencedColumnName: "id" },
+      inverseJoinColumn: { name: "followingId", referencedColumnName: "id" }
   })
   following: User[];
-  @ManyToMany(() => User, user => user.followers)
+  @ManyToMany(() => User, user => user.following)
   followers: User[];
 
+  
   // user block relationship
- @OneToMany(()=>UserBlockAssociation,userBlockAssociation=>userBlockAssociation.blocked_to_users)
-  blocked_from_users:UserBlockAssociation[]
+ @OneToMany(()=>UserBlockAssociation,userBlockAssociation=>userBlockAssociation.blockedToUsers)
+  blockedFromUsers:UserBlockAssociation[]
 
-  @OneToMany(()=>UserBlockAssociation,userBlockAssociation=>userBlockAssociation.blocked_from_users)
-  blocked_to_users:UserBlockAssociation[]
+  @OneToMany(()=>UserBlockAssociation,userBlockAssociation=>userBlockAssociation.blockedFromUsers)
+  blockedToUsers:UserBlockAssociation[]
 }

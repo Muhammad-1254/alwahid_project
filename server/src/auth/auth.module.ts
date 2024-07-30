@@ -8,6 +8,7 @@ import { UserService } from "src/user/user.service";
 import { JwtModule } from "@nestjs/jwt";
 import { JwtAccessTokenStrategy } from "./strategies/jwt-access-token.strategy";
 import { JwtRefreshTokenStrategy } from "./strategies/jwt-refresh-token.strategy";
+import { RolesGuard } from "./guards/roles.guard";
 
 @Module({
   imports: [
@@ -19,7 +20,7 @@ import { JwtRefreshTokenStrategy } from "./strategies/jwt-refresh-token.strategy
       verifyOptions: { ignoreExpiration: false },
     }),
   ],
-  providers: [AuthService, UserService, LocalStrategy, JwtAccessTokenStrategy,JwtRefreshTokenStrategy],
+  providers: [AuthService, UserService, LocalStrategy, JwtAccessTokenStrategy,JwtRefreshTokenStrategy, RolesGuard,],
   controllers: [AuthController],
 })
 export class AuthModule {}

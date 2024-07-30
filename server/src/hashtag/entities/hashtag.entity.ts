@@ -13,6 +13,6 @@ export class Hashtag extends ParentEntity<Hashtag> {
     name: string;
 
     @OneToMany(()=>HashtagPostAssociation, hashtagPostAssociation=>hashtagPostAssociation.hashtag)
-    post_hashtag:HashtagPostAssociation[]
+    postHashtag:HashtagPostAssociation[]
 }
 

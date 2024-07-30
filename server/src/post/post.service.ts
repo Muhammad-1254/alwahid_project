@@ -7,8 +7,8 @@ import {
 import {
   CreatePostCommentDto,
   CreatePostDto,
+  createPostLikeDto,
   CreatePostMediaDto,
-  createPostOrCommentLikeDto,
   CreatePresignedUrlDto,
 } from "./dto/create-post.dto";
 import {
@@ -26,6 +26,7 @@ import { JwtAuthGuardTrueType, UserRoleEnum } from "src/lib/types/user";
 import {
   commentsResponseDataType,
   postCommentLikesResponseDataType,
+  PostLikeTargetEnum,
   PostMediaEnum,
   PostUserTypeEnum,
 } from "src/lib/types/post";
@@ -35,6 +36,7 @@ import { ConfigService } from "@nestjs/config";
 import { S3Client } from "@aws-sdk/client-s3";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { prefixSplitNestingObject } from "src/lib/utils";
 
 @Injectable()
 export class PostService {
@@ -49,8 +51,11 @@ export class PostService {
     user: JwtAuthGuardTrueType,
     createPresignedUrlDto: CreatePresignedUrlDto[],
   ) {
-    console.log({user})
-    if(user.userRole !== UserRoleEnum.ADMIN && user.userRole !== UserRoleEnum.CREATOR){
+    console.log({ user });
+    if (
+      user.userRole !== UserRoleEnum.ADMIN &&
+      user.userRole !== UserRoleEnum.CREATOR
+    ) {
       throw new ForbiddenException("Invalid user role!");
     }
     const s3Client = await this.getS3Client();
@@ -59,50 +64,64 @@ export class PostService {
       const key = `post/${user.userId}/${new Date().getTime()}-${createPresignedUrlDto[i].fileName}`;
       const command = new PutObjectCommand({
         Bucket: this.configService.getOrThrow("AWS_S3_BUCKET_NAME"),
-        Key:key,
+        Key: key,
         ContentType: createPresignedUrlDto[i].mimeType,
       });
       const url = await getSignedUrl(s3Client, command, {
         expiresIn: 1200, // 20 minutes
       });
-      presignedUrls.push({fileName:createPresignedUrlDto[i].fileName,key,url});
+      presignedUrls.push({
+        fileName: createPresignedUrlDto[i].fileName,
+        key,
+        url,
+      });
     }
-   
-    return presignedUrls
+
+    return presignedUrls;
   }
-  async createPost(
-    user: JwtAuthGuardTrueType,
-    createPostDto: CreatePostDto) {
-    if(user.userRole !== UserRoleEnum.ADMIN && user.userRole !== UserRoleEnum.CREATOR){
+  async createPost(user: JwtAuthGuardTrueType, createPostDto: CreatePostDto) {
+    if (
+      user.userRole !== UserRoleEnum.ADMIN &&
+      user.userRole !== UserRoleEnum.CREATOR
+    ) {
       throw new ForbiddenException("Invalid user role!");
     }
- if(createPostDto.postMedias.length === 0 && createPostDto.textContent === ''){
-   throw new Error("Post content or media is required!");
- }
+    if (
+      createPostDto.postMedias.length === 0 &&
+      createPostDto.textContent === ""
+    ) {
+      throw new Error("Post content or media is required!");
+    }
 
     await this.entityManager.transaction(async entityManager => {
       const postId = uuid();
       const post = new Post({
         id: postId,
-        text_content: createPostDto.textContent,
-        post_by: user.userRole ==='creator' ? PostUserTypeEnum.CREATOR : PostUserTypeEnum.ADMIN,
-        creator_user_id: user.userRole==='creator' ? user.userId : null,
-        admin_user_id: user.userRole==='admin' ? user.userId : null,
+        textContent: createPostDto.textContent,
+        postBy:
+          user.userRole === "creator"
+            ? PostUserTypeEnum.CREATOR
+            : PostUserTypeEnum.ADMIN,
+        creatorUserId: user.userRole === "creator" ? user.userId : null,
+        adminUserId: user.userRole === "admin" ? user.userId : null,
       });
 
       // the media.urlKey have key we have to make the url from aws presigned method then add into db
-      const postMediaList: PostMedia[] = []
-      for(let i =0; i< createPostDto.postMedias.length; i++){
-        const url = await this.getAwsS3UrlFromKey(createPostDto.postMedias[i].urlKey,await this.getS3Client())
+      const postMediaList: PostMedia[] = [];
+      for (let i = 0; i < createPostDto.postMedias.length; i++) {
+        const url = await this.getAwsS3UrlFromKey(
+          createPostDto.postMedias[i].urlKey,
+          await this.getS3Client(),
+        );
         const postMedia = new PostMedia({
           id: uuid(),
-          post_id:postId,
-          mime_type:createPostDto.postMedias[i].mimeType,
-          url
+          postId: postId,
+          mimeType: createPostDto.postMedias[i].mimeType,
+          url,
         });
         postMediaList.push(postMedia);
       }
-       
+
       await entityManager.save(post);
       if (postMediaList.length > 0) {
         await entityManager.save(postMediaList);
@@ -112,8 +131,8 @@ export class PostService {
       // if (createPostDto.hashtagIds) {
       //   for (const hashtagId of createPostDto.hashtagIds) {
       //     const postHashtagAssociation = new HashtagPostAssociation({
-      //       post_id,
-      //       hashtag_id: hashtagId,
+      //       postId,
+      //       hashtagId: hashtagId,
       //     });
       //     await entityManager.save(postHashtagAssociation);
       //   }
@@ -126,10 +145,10 @@ export class PostService {
       //     if (!taggedUser) {
       //       throw new NotFoundException(`User with ID ${userId} not found!`);
       //     }
-      //     if (taggedUser.tagged_posts && taggedUser.tagged_posts.length > 0) {
-      //       taggedUser.tagged_posts.push(post);
+      //     if (taggedUser.taggedPosts && taggedUser.taggedPosts.length > 0) {
+      //       taggedUser.taggedPosts.push(post);
       //     } else {
-      //       taggedUser.tagged_posts = [post];
+      //       taggedUser.taggedPosts = [post];
       //     }
       //     await entityManager.save(taggedUser);
       //   }
@@ -159,7 +178,7 @@ export class PostService {
         const postMedia_ = new PostMedia({
           ...media,
           id: uuid(),
-          post_id: createMedia.postId,
+          postId: createMedia.postId,
         });
         postMedia.push(postMedia_);
         this.entityManager.save(postMedia_);
@@ -190,95 +209,100 @@ export class PostService {
       postComment = new PostComments({
         id: uuid(),
         content: createPostDto.content,
-        user_id: createPostDto.userId,
-        post_id: createPostDto.postId,
+        userId: createPostDto.userId,
+        postId: createPostDto.postId,
       });
       await this.entityManager.save(postComment);
     });
 
     return { message: "comment created successfully!", data: postComment };
   }
-  async createPostOrCommentLike(createLike: createPostOrCommentLikeDto) {
-    if (!createLike.postId && !createLike.commentId) {
-      // checking if post id or comment id is exist or not
-      throw new Error("Post id or comment id is required!");
-    }
-    await this.entityManager.transaction(async entityManager => {
+  async createPostLike(
+    user: JwtAuthGuardTrueType,
+    createLike: createPostLikeDto,
+  ) {
+    const like = await this.entityManager.transaction(async eM => {
       // checking of user already liked the post or comment
-      const likes = await entityManager.find(PostCommentLike, {
-        where: { user_id: createLike.userId },
+      const like = await eM.findOne(PostCommentLike, {
+        where: { postId: createLike.postId, userId: user.userId },
+        select: ["id", "likeType"],
       });
-      const isLiked = likes.find(
-        like =>
-          like.post_id === createLike.postId ||
-          like.comment_id === createLike.commentId,
-      );
-      if (isLiked) {
-        // dislike now
-        isLiked.like_type = createLike.likeType;
-        await entityManager.save(isLiked);
-        return { message: "like updated successfully!" };
+      if (like) {
+        // checking if likeType is same or not
+        if (like.likeType === createLike.likeType) {
+          return { message: "already liked!" };
+        } else {
+          // if same then update new one
+          like.likeType = createLike.likeType;
+          await eM.save(like);
+          return { message: "like updated successfully!" };
+        }
       }
-      //checking if user is exist or not
-      const [user, postOrComment] = await Promise.all([
-        await entityManager.findOne(User, {
-          where: { id: createLike.userId },
-          select: ["id"],
-        }),
-        createLike.postId
-          ? await entityManager.findOne(Post, {
-              where: { id: createLike.postId },
-              select: ["id", "admin_user_id", "admin_user_id"],
-            })
-          : await entityManager.findOne(PostComments, {
-              where: { id: createLike.commentId },
-              select: ["id", "user_id"],
-            }),
-      ]);
-      if (!user) {
-        throw new NotFoundException("User not found!");
-      }
-      if (!postOrComment) {
-        throw new NotFoundException("Post or Comment not found!");
-      }
-
-      const like = new PostCommentLike({
+      // if not liked then create new one
+      const postLike = new PostCommentLike({
         id: uuid(),
-        ...createLike,
+        likeType: createLike.likeType,
+        userId: user.userId,
+        postId: createLike.postId,
+        targetType: PostLikeTargetEnum.POST,
       });
-      entityManager.save(like);
+      await eM.save(postLike);
+      return { message: "like created successfully!" };
     });
+    return like.message;
   }
-  async findUserPersonalPosts(user:JwtAuthGuardTrueType,from:number,to:number){
-    if(user.userRole !== UserRoleEnum.ADMIN && user.userRole !== UserRoleEnum.CREATOR){
+  async findUserPersonalPosts(
+    user: JwtAuthGuardTrueType,
+    from: number,
+    to: number,
+  ) {
+    if (
+      user.userRole !== UserRoleEnum.ADMIN &&
+      user.userRole !== UserRoleEnum.CREATOR
+    ) {
       throw new ForbiddenException("Invalid user role!");
     }
     const posts = await this.entityManager.find(Post, {
-      where: user.userRole === UserRoleEnum.ADMIN ? { admin_user_id: user.userId } : { creator_user_id: user.userId },
+      where:
+        user.userRole === UserRoleEnum.ADMIN
+          ? { adminUserId: user.userId }
+          : { creatorUserId: user.userId },
       skip: from,
       take: to,
-      order: { created_at: "DESC" },
+      order: { createdAt: "DESC" },
       relations: ["postMedias"],
+      loadEagerRelations: false,
+      select: ["id", "textContent", "createdAt", "postMedias"],
     });
-    return posts
+    const postsData = posts.map(post => ({
+      id: post.id,
+      textContent: post.textContent,
+      createdAt: post.createdAt,
+      postMedias: post.postMedias.map(media => ({
+        id: media.id,
+        mimeType: media.mimeType,
+        url: media.url,
+      })),
+    }));
+    return postsData;
   }
 
   async findAllPosts(from: number, to: number) {
     const posts = await this.entityManager.find(Post, {
       skip: from,
       take: to,
-      order: { created_at: "DESC" },
+      order: { createdAt: "DESC" },
     });
     return { data: posts };
   }
 
-  async findAllComments(post_id: string, from: number, to: number) {
+  async findAllComments(postId: string, from: number, to: number) {
     const postComments: commentsResponseDataType[] = [];
 
     await this.entityManager.transaction(async entityManager => {
       const post = await entityManager.findOne(Post, {
         where: {
-          id: post_id,
+          id: postId,
         },
         select: ["id"],
       });
@@ -287,7 +311,7 @@ export class PostService {
       }
       const [comments]: [PostComments[], number] =
         await entityManager.findAndCount(PostComments, {
-          where: { post_id },
+          where: { postId },
           skip: from,
           take: to,
         });
@@ -295,42 +319,59 @@ export class PostService {
 
       comments.forEach(async comment => {
         const user = await entityManager.findOne(User, {
-          where: { id: comment.user_id },
+          where: { id: comment.userId },
           select: [
             "id",
             "firstname",
             "lastname",
-            "avatar_url",
-            "user_role",
-            "is_special_user",
-            "is_verified",
+            "avatarUrl",
+            "userRole",
+            "isSpecialUser",
+            "isVerified",
           ],
         });
         postComments.push({
-          user_id: user.id,
+          userId: user.id,
           firstname: user.firstname,
           lastname: user.lastname,
-          avatar_url: user.avatar_url,
-          user_role: user.user_role,
-          is_special_user: user.is_special_user,
-          is_verified: user.is_verified,
-          comment_id: comment.id,
+          avatarUrl: user.avatarUrl,
+          userRole: user.userRole,
+          isSpecialUser: user.isSpecialUser,
+          isVerified: user.isVerified,
+          commentId: comment.id,
           commentContent: comment.content,
           commentLikes: comment.commentLikes,
-          created_at: comment.created_at,
+          createdAt: comment.createdAt,
         });
       });
     });
     return { data: postComments };
   }
 
-  async findAllPostLikes(post_id: string, from: number, to: number) {
+  async findUserLikesOnPost(
+    user: JwtAuthGuardTrueType,
+    from: number,
+    to: number,
+  ) {
+    const postLikes = await this.entityManager.find(PostCommentLike, {
+      where: { userId: user.userId, targetType: PostLikeTargetEnum.POST },
+      skip: from,
+      take: to,
+      order: { createdAt: "DESC" },
+      relations: ["post"],
+      select: ["id", "likeType", "createdAt", "postId", "post"],
+    });
+    console.log({ postLikes });
+    return postLikes;
+  }
+
+  async findAllPostLikes(postId: string, from: number, to: number) {
     const postLikes: postCommentLikesResponseDataType[] = [];
 
     await this.entityManager.transaction(async entityManager => {
       const post = await entityManager.findOne(Post, {
         where: {
-          id: post_id,
+          id: postId,
         },
         select: ["id"],
       });
@@ -339,7 +380,7 @@ export class PostService {
       }
       const [likes]: [PostCommentLike[], number] =
         await entityManager.findAndCount(PostCommentLike, {
-          where: { post_id },
+          where: { postId },
           skip: from,
           take: to,
         });
@@ -347,40 +388,40 @@ export class PostService {
 
       likes.forEach(async like => {
         const user = await entityManager.findOne(User, {
-          where: { id: like.user_id },
+          where: { id: like.userId },
           select: [
             "id",
             "firstname",
             "lastname",
-            "avatar_url",
-            "user_role",
-            "is_special_user",
-            "is_verified",
+            "avatarUrl",
+            "userRole",
+            "isSpecialUser",
+            "isVerified",
           ],
         });
         postLikes.push({
-          user_id: user.id,
+          userId: user.id,
           firstname: user.firstname,
           lastname: user.lastname,
-          avatar_url: user.avatar_url,
-          user_role: user.user_role,
-          is_special_user: user.is_special_user,
-          is_verified: user.is_verified,
-          like_id: like.id,
-          like_type: like.like_type,
-          created_at: like.created_at,
+          avatarUrl: user.avatarUrl,
+          userRole: user.userRole,
+          isSpecialUser: user.isSpecialUser,
+          isVerified: user.isVerified,
+          likeId: like.id,
+          likeType: like.likeType,
+          createdAt: like.createdAt,
         });
       });
     });
     return { data: postLikes };
   }
-  async findAllCommentLikes(comment_id: string, from: number, to: number) {
+  async findAllCommentLikes(commentId: string, from: number, to: number) {
     const commentLikes: postCommentLikesResponseDataType[] = [];
 
     await this.entityManager.transaction(async entityManager => {
       const comment = await entityManager.findOne(PostComments, {
         where: {
-          id: comment_id,
+          id: commentId,
         },
       });
       if (!comment) {
@@ -388,58 +429,114 @@ export class PostService {
       }
       const [likes]: [PostCommentLike[], number] =
         await entityManager.findAndCount(PostCommentLike, {
-          where: { comment_id },
+          where: { commentId },
           skip: from,
           take: to,
         });
       // finding the relevant user belongs to the comment
       likes.forEach(async like => {
         const user = await entityManager.findOne(User, {
-          where: { id: like.user_id },
+          where: { id: like.userId },
           select: [
             "id",
             "firstname",
             "lastname",
-            "avatar_url",
-            "user_role",
-            "is_special_user",
-            "is_verified",
+            "avatarUrl",
+            "userRole",
+            "isSpecialUser",
+            "isVerified",
           ],
         });
         commentLikes.push({
-          user_id: user.id,
+          userId: user.id,
           firstname: user.firstname,
           lastname: user.lastname,
-          avatar_url: user.avatar_url,
-          user_role: user.user_role,
-          is_special_user: user.is_special_user,
-          is_verified: user.is_verified,
-          like_id: like.id,
-          like_type: like.like_type,
-          created_at: like.created_at,
+          avatarUrl: user.avatarUrl,
+          userRole: user.userRole,
+          isSpecialUser: user.isSpecialUser,
+          isVerified: user.isVerified,
+          likeId: like.id,
+          likeType: like.likeType,
+          createdAt: like.createdAt,
         });
       });
     });
     return { data: commentLikes };
   }
 
-  async findOnePost(post_id: string) {
-    const post = await this.entityManager.findOne(Post, {
-      where: { id: post_id },
-    });
-    return { data: post };
-  }
+  async findOnePost(postId: string) {
+    const post = await this.entityManager
+      .createQueryBuilder(Post, "post")
+      .select(["post.id", "post.textContent", "post.createdAt", "post.postBy"])
+      .groupBy("post.id")
+      .addGroupBy("post.textContent")
+      .addGroupBy("post.createdAt")
+      .addGroupBy("post.postBy")
 
+      // getting post media details
+      .leftJoin("post.postMedias", "postMedias")
+      .addSelect(["postMedias.url", "postMedias.mimeType", "postMedias.id"])
+      .addGroupBy("postMedias.url")
+      .addGroupBy("postMedias.mimeType")
+      .addGroupBy("postMedias.id")
+
+      // getting post likes count
+      .leftJoin("post.postLikes", "postLikes")
+      .addSelect("COUNT(postLikes.id)", "likesCount")
+
+      // getting post comments count
+      .leftJoin("post.postComments", "postComments")
+      .addSelect("COUNT(postComments.id)", "commentsCount")
+
+      // getting creator user details
+      .leftJoin("post.creatorUser", "cu")
+      .leftJoin("cu.user", "creatorUser")
+      .addSelect(["creatorUser.firstname", "creatorUser.lastname", "creatorUser.avatarUrl"])
+      .addGroupBy("creatorUser.firstname")
+      .addGroupBy("creatorUser.lastname")
+      .addGroupBy("creatorUser.avatarUrl")
+
+      // getting admin user details
+      .leftJoin("post.adminUser", "au")
+      .leftJoin("au.user", "adminUser")
+      .addSelect(["adminUser.firstname", "adminUser.lastname", "adminUser.avatarUrl"])
+      .addGroupBy("adminUser.firstname")
+      .addGroupBy("adminUser.lastname")
+      .addGroupBy("adminUser.avatarUrl")
+
+      // getting latest comment user name
+      .leftJoin("postComments.user", "lastCommentUser")
+      .addSelect(["lastCommentUser.firstname", "lastCommentUser.lastname"])
+      .addGroupBy("lastCommentUser.firstname")
+      .addGroupBy("lastCommentUser.lastname")
+
+      // getting last like user name
+      .leftJoin("postLikes.user", "lastLikeUser")
+      .addSelect(["lastLikeUser.firstname", "lastLikeUser.lastname"])
+      .addGroupBy("lastLikeUser.firstname")
+      .addGroupBy("lastLikeUser.lastname")
+
+      .where("post.id = :postId", { postId })
+      .getRawOne();
+
+    if (!post) {
+      throw new NotFoundException("Post not found!");
+    }
+    
+
+    return prefixSplitNestingObject(post);
+    
+  }
   async updatePostContent(updatePost: UpdatePostContentDto) {
     await this.entityManager.transaction(async entityManager => {
       const post = await entityManager.findOne(Post, {
-        where: { id: updatePost.post_id },
-        select: ["id", "text_content"],
+        where: { id: updatePost.postId },
+        select: ["id", "textContent"],
       });
       if (!post) {
         throw new NotFoundException("Post not found!");
       }
-      post.text_content = updatePost.content;
+      post.textContent = updatePost.content;
       await this.entityManager.save(post);
     });
     return { message: "post updated successfully!" };
@@ -447,7 +544,7 @@ export class PostService {
   async updatePostCommentContent(updateComment: updatePostCommentContentDto) {
     await this.entityManager.transaction(async entityManager => {
       const comment = await entityManager.findOne(PostComments, {
-        where: { id: updateComment.comment_id },
+        where: { id: updateComment.commentId },
         select: ["id", "content"],
       });
 
@@ -487,10 +584,10 @@ export class PostService {
     return s3Client;
   }
   async getAwsS3UrlFromKey(key: string, s3Client: S3Client) {
-const command = new GetObjectCommand({
-  Bucket:this.configService.getOrThrow("AWS_S3_BUCKET_NAME"),
-  Key:key
-});
-return  await getSignedUrl(s3Client,command)
+    const command = new GetObjectCommand({
+      Bucket: this.configService.getOrThrow("AWS_S3_BUCKET_NAME"),
+      Key: key,
+    });
+    return await getSignedUrl(s3Client, command);
   }
 }

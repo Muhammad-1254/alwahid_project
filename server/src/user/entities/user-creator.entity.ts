@@ -5,38 +5,45 @@ import { Location } from "src/location/entities/location.entity";
 import { AdminUser } from "./user-admin.entity";
 import { Post } from "src/post/entities/post.entity";
 
-@Entity("creator_users")
+@Entity("creatorUsers")
 export class CreatorUser {
   constructor(creatorUser: Partial<CreatorUser>) {
     Object.assign(this, creatorUser);
   }
   @Column({ primary: true, foreignKeyConstraintName: "users.id", type: "uuid" })
-  user_id: string;
+  userId: string;
 
   @Column({ nullable: true, type: "date" })
-  authorized_at: Date;
+  authorizedAt: Date;
 
   @Column({ type: "text" })
-  works_on: string;
+  worksOn: string;
 
   @Column({ nullable: false, type: "enum", enum: QualificationEnum })
   qualification: QualificationEnum;
 
-  @OneToOne(() => User, user => user.creator_user, {
+  @OneToOne(() => User, user => user.creatorUser, {
     cascade:true,
     eager:true,
     onDelete: "CASCADE",
     onUpdate: "CASCADE",
   })
-  @JoinColumn({name:'user_id'})
+  @JoinColumn({name:'userId'})
   user: User;
 
-  @OneToMany(()=>Post,post=>post.creator_user)
+  @OneToMany(()=>Post,post=>post.creatorUser)
   posts:Post[]
 
-  @OneToOne(() => Location, Location => Location.creator_work_location,)
-  work_location: Location;
+  @OneToOne(() => Location, Location => Location.creatorWorkLocation,)
+  workLocation: Location;
 
-  @ManyToOne(() => AdminUser, adminUser => adminUser.user_id,)
-  authorized_admin_id: string;
+  @Column({type:'uuid',})
+  authorizedAdminId:string;
+  
+  @ManyToOne(() => AdminUser, adminUser => adminUser.authorizedCreators,{
+    onDelete:"SET NULL",
+    onUpdate:"CASCADE",
+  })
+  @JoinColumn({name:'authorizedAdminId'})
+  authorizedAdmin: AdminUser;
 }

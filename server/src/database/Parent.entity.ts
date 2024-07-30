@@ -2,9 +2,9 @@ import { CreateDateColumn, UpdateDateColumn } from "typeorm";
 
 export class ParentEntity<T> {
   @CreateDateColumn()
-  created_at: Date;
+  createdAt: Date;
   @UpdateDateColumn()
-  updated_at: Date;
+  updatedAt: Date;
 
   constructor(partial: Partial<T>) {
     Object.assign(this, partial);

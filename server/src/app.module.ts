@@ -34,7 +34,12 @@ import { AuthModule } from './auth/auth.module';
   ],
   controllers: [AppController],
   providers: [
-    AppService,
+     AppService,
+    // {
+    //   provide: APP_GUARD,
+
+    // }
+  
     // {
     //   provide: APP_GUARD,
     //   useClass: ThrottlerGuard,

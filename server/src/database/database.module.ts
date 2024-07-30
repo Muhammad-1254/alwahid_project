@@ -11,6 +11,7 @@ import { Post } from "src/post/entities/post.entity";
 import { AdminUser } from "src/user/entities/user-admin.entity";
 import { UserBlockAssociation } from "src/user/entities/user-block-association.entity";
 import { CreatorUser } from "src/user/entities/user-creator.entity";
+import { UserFollowingAssociation } from "src/user/entities/user-followers-association.entity";
 import { NormalUser } from "src/user/entities/user-normal.entity";
 import { User } from "src/user/entities/user.entity";
 
@@ -35,6 +36,7 @@ import { User } from "src/user/entities/user.entity";
           AdminUser,
           CreatorUser,
           NormalUser,
+          UserFollowingAssociation,
           UserBlockAssociation,
           Location,
           Post,
@@ -42,7 +44,8 @@ import { User } from "src/user/entities/user.entity";
           PostCommentLike,
           PostMedia,
           Hashtag,
-          HashtagPostAssociation
+          HashtagPostAssociation,
+          
         ],
         synchronize: true,
       }),
@@ -52,6 +55,7 @@ import { User } from "src/user/entities/user.entity";
       AdminUser,
       CreatorUser,
       NormalUser,
+      UserFollowingAssociation,
       UserBlockAssociation,
       Location,
       Post,

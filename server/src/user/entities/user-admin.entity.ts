@@ -3,33 +3,28 @@ import { User } from "./user.entity";
 import { CreatorUser } from "./user-creator.entity";
 import { Post } from "src/post/entities/post.entity";
 
-@Entity("admin_users")
+@Entity("adminUsers")
 export class AdminUser {
   constructor(adminUser: Partial<AdminUser>) {
     Object.assign(this, adminUser);
   }
 
   @Column({ primary: true, foreignKeyConstraintName: "users.id", type: "uuid" })
-  user_id: string;
+  userId: string;
 
-  @OneToMany(() => CreatorUser, creatorUser => creatorUser.user_id,{
-    cascade:true,
-    onDelete: "SET NULL",
-    onUpdate: "CASCADE",
-  })
-  // @JoinColumn({name:'user_id'})
-  authorized_creators: string[];
+  @OneToMany(() => CreatorUser, creatorUser => creatorUser.authorizedAdmin,)
+  authorizedCreators: CreatorUser[];
 
-  @OneToOne(() => User, user => user.admin_user,{
+  @OneToOne(() => User, user => user.adminUser,{
     cascade:true,
     eager:true,
     onDelete: "CASCADE",
     onUpdate: "CASCADE",
   })
-  @JoinColumn({name:'user_id'})
+  @JoinColumn({name:'userId'})
   user: User;
 
-  @OneToMany(()=>Post,post=>post.creator_user)
+  @OneToMany(()=>Post,post=>post.creatorUser)
   posts:Post[]
 
 }

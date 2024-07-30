@@ -22,13 +22,13 @@ export class CreateUserDto {
   lastname: string;
   
   @IsString()
-  avatar_url: string;
+  avatarUrl: string;
 
   @IsNumber()
   age:number;
 
   @IsString()
-  phone_number: string;
+  phoneNumber: string;
   
   @IsNotEmpty()
   @IsEnum(GenderEnum,{message:"Valid gender required!"})
@@ -38,11 +38,11 @@ export class CreateUserDto {
 
   @IsNotEmpty()
   @IsDate({message:"Valid date of birth required!"})
-  date_of_birth: Date;
+  dateOfBirth: Date;
 
   @IsNotEmpty()
   @IsEnum(AuthProviderEnum,{message:"Valid auth provider required!"})
-  auth_provider: AuthProviderEnum;
+  authProvider: AuthProviderEnum;
 
 }
 
@@ -55,7 +55,7 @@ class CreateUserCreatorUserDTO {
 
     @IsNotEmpty()
     @IsUUID()
-    user_id:string
+    userId:string
  
     @IsNotEmpty()
     @IsString()
@@ -64,18 +64,18 @@ class CreateUserCreatorUserDTO {
 
     @IsString()
     @IsNotEmpty()
-    works_on:string
+    worksOn:string
 
     @IsString()
     @IsNotEmpty()
-    work_location:CreateLocationDTO
+    workLocation:CreateLocationDTO
 }
 
 export class CreateUserCreatorUserRequestAdminDTO extends CreateUserCreatorUserDTO{}
 export class CreateUserApprovedCreatorUserDTO extends CreateUserCreatorUserDTO{
   @IsNotEmpty()
   @IsUUID()
-  admin_id:string
+  adminId:string
 
 }
 
@@ -83,7 +83,7 @@ export class CreateUserApprovedCreatorUserDTO extends CreateUserCreatorUserDTO{
 export class createUserLocationDTO extends CreateLocationDTO{
   @IsNotEmpty()
   @IsString()
-  user_id:string
+  userId:string
 }
 
 

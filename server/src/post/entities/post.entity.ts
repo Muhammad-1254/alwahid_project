@@ -19,10 +19,11 @@ export class Post extends ParentEntity<Post> {
     id:string;
 
     @Column({ nullable: true, type: "text" })
-    text_content: string;
+    textContent: string;
 
+    
     @Column({ type: "enum",enum: PostUserTypeEnum})
-    post_by: PostUserTypeEnum;
+    postBy: PostUserTypeEnum;
 
     @OneToMany(()=>PostMedia,postMedia =>postMedia.post)
     postMedias:PostMedia[]
@@ -35,33 +36,33 @@ export class Post extends ParentEntity<Post> {
     
 
     @Column({nullable:true,type:'uuid'})
-    creator_user_id:string;
+    creatorUserId:string;
     @ManyToOne(()=>CreatorUser,creatorUser=>creatorUser.posts,{
         cascade:true,
         eager:true,
         onDelete:"CASCADE",
         onUpdate:"CASCADE",
     })
-    @JoinColumn({name:"creator_user_id"})
-    creator_user:CreatorUser
+    @JoinColumn({name:"creatorUserId"})
+    creatorUser:CreatorUser
 
 
     @Column({nullable:true,type:'uuid'})
-    admin_user_id:string;
+    adminUserId:string;
     @ManyToOne(()=>AdminUser,adminUser=>adminUser.posts,{
         cascade:true,
         eager:true,
         onDelete:"CASCADE",
         onUpdate:"CASCADE",
     })
-    @JoinColumn({name:"admin_user_id"})
-    admin_user:AdminUser
+    @JoinColumn({name:"adminUserId"})
+    adminUser:AdminUser
    
-    @ManyToMany(()=>User,user=>user.tagged_posts)
-    tagged_users:User[]
+    @ManyToMany(()=>User,user=>user.taggedPosts)
+    taggedUsers:User[]
 
     @OneToMany(()=>HashtagPostAssociation, hashtagPostAssociation=>hashtagPostAssociation.post)
-    post_hashtag:HashtagPostAssociation[]
+    postHashtag:HashtagPostAssociation[]
     
 }
 
