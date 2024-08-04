@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseFilters } from "@nestjs/common";
+import { Controller, Get, Param, Query, UseFilters } from "@nestjs/common";
 import { AllExceptionFilter } from "src/all-exceptions.filter";
 import { MyLoggerService } from "src/my-logger/my-logger.service";
 import { PostService } from "../post.service";
@@ -11,7 +11,7 @@ export class PostForAnyUserController {
   
   
   @Get("post/:postId")
-  findOnePost(@Param("postId") postId: string) {
-    return this.postService.findOnePost(postId);
+  findOnePost(@Param("postId") postId: string, @Query("userId") userId:string) {
+    return this.postService.findOnePost(postId,userId);
   }
 }

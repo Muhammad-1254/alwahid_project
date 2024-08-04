@@ -10,7 +10,7 @@ export class Location extends ParentEntity<Location> {
     @PrimaryGeneratedColumn('uuid')
     id: string
 
-    @Column({type:'enum',enum:CountryEnum})
+    @Column({type:'enum',enum:CountryEnum,})
     country: CountryEnum
 
     @Column({type:'enum',enum:ProvinceEnum})

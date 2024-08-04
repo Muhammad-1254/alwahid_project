@@ -12,10 +12,6 @@ import {
 } from "@nestjs/common";
 import { UserService } from "./user.service";
 import {
-  CreateUserAdminUserDTO,
-  CreateUserApprovedCreatorUserDTO,
-  CreateUserCreatorUserRequestAdminDTO,
-  CreateUserDto,
   createUserLocationDTO,
 } from "./dto/create-user.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
@@ -26,29 +22,6 @@ import { JwtAccessTokenGuard } from "src/auth/guards/jwt-access-token.guard";
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Post("create/normal/user")
-  createUserNormalUser(@Body() createUser: CreateUserDto) {
-    return this.userService.createUserNormalUser(createUser);
-  }
-
-  @Post("create/creator/request/admin")
-  createUserCreatorUserRequestAdmin(
-    @Body() user: CreateUserCreatorUserRequestAdminDTO,
-  ) {
-    return this.userService.createUserCreatorUserRequestAdmin(user);
-  }
-
-  @Post("create/creator/approved")
-  createUserApprovedCreatorUser(
-    @Body() user: CreateUserApprovedCreatorUserDTO,
-  ) {
-    return this.userService.createUserApprovedCreatorUser(user);
-  }
-
-  @Post("create/admin")
-  createUserAdminUser(@Body() createUser: CreateUserAdminUserDTO) {
-    return this.userService.createUserAdminUser(createUser);
-  }
 
   @Post("create/location") // create user home location
   createUserLocation(@Body() createUserLocation: createUserLocationDTO) {

@@ -53,9 +53,6 @@ export class CreatePostCommentDto {
   @IsString({ message: "comment content is required!" })
   content: string;
 
-  @IsNotEmpty({ message: "user id is required!" })
-  @IsUUID("4")
-  userId: string;
 
   @IsNotEmpty({ message: "post id is required!" })
   @IsUUID("4")
@@ -70,14 +67,18 @@ export class createPostLikeDto {
   postId: string;
 }
 
+export class createUserSavedPostDto {
+  @IsNotEmpty()
+  @IsUUID('4')
+  postId: string;
+}
+
 export class createPostCommentLikeDto {
   @IsNotEmpty()
   @IsEnum(PostLikeEnum, { message: `valid like type required!` })
   likeType: PostLikeEnum;
 
   @IsNotEmpty()
-  @IsUUID("4")
-  userId: string;
   @IsUUID("4")
   commentId: string;
 }

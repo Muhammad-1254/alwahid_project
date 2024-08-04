@@ -114,7 +114,7 @@ const Media = ({ media }: { media: DocumentPickerAsset[] }) => {
       numColumns={2}
       showsVerticalScrollIndicator={false}
       // @ts-ignore
-      renderItem={(props) => <ImageRenderItem media={props.item} />}
+      renderItem={(props) => <MasonryListImageRenderItem media={props.item} />}
       style={{ gap: 8 }}
     />
   );
@@ -126,9 +126,7 @@ type LoadingIndicatorModalProps = {
 export const LoadingIndicatorModal: FC<LoadingIndicatorModalProps> = ({
   cancelUploadHandler,
 }) => {
-  const { width } = useWindowDimensions();
   const [btnDisable, setBtnDisable] = useState(false);
-  const { colorScheme } = useColorScheme();
   const { uploadLoading, uploadProgress } = useAppSelector((s) => s.newPost);
   return (
     <Modal
@@ -162,9 +160,8 @@ export const LoadingIndicatorModal: FC<LoadingIndicatorModalProps> = ({
 
 
 
-const ImageRenderItem = ({ media }: { media: DocumentPickerAsset }) => {
+export const MasonryListImageRenderItem = ({ media }: { media: DocumentPickerAsset }) => {
     const dispatch = useDispatch();
-    const { width, height } = useWindowDimensions();
     const { colorScheme } = useColorScheme();
     const [ar, setAr] = useState("1/1");
     const [visible, setVisible] = useState(false);

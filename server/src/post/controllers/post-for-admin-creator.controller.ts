@@ -24,13 +24,13 @@ import { UpdatePostContentDto } from "../dto/update-post.dto";
 
 @UseFilters(AllExceptionFilter)
 @UseGuards(JwtAccessTokenGuard, RolesGuard)
-@Roles(UserRoleEnum.ADMIN, UserRoleEnum.CREATOR)  
 @Controller()
 export class PostForAdminCreatorController {
   constructor(private readonly postService: PostService) {}
   private readonly logger = new MyLoggerService(PostForAdminCreatorController.name);
   
   // @Throttle({short:{ttl:1000*60,limit:1}})
+@Roles(UserRoleEnum.ADMIN, UserRoleEnum.CREATOR)  
   @Post("post/create")
   create(
     @Request() req,
@@ -41,6 +41,8 @@ export class PostForAdminCreatorController {
     return this.postService.createPost(req.user, createPostDto);
   }
 
+
+  @Roles(UserRoleEnum.ADMIN, UserRoleEnum.CREATOR)  
   @Post("post/presigned-url")
   createPresignedUrl(
     @Request() req,
@@ -48,11 +50,13 @@ export class PostForAdminCreatorController {
   ) {
     return this.postService.createPresignedUrl(req.user, createUrl);
   }
+@Roles(UserRoleEnum.ADMIN, UserRoleEnum.CREATOR)  
   @Post("post/media")
   createPostMedia(@Body() createPostDto: CreatePostMediaDto) {
     return this.postService.createPostMedia(createPostDto);
   }
 
+@Roles(UserRoleEnum.ADMIN, UserRoleEnum.CREATOR)  
   @Get("post/user/personal")
   findUserPersonalPosts(
     @Request() req,

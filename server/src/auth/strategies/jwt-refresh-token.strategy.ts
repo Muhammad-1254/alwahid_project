@@ -10,6 +10,6 @@ export class JwtRefreshTokenStrategy extends PassportStrategy(Strategy,"jwt-refr
         })}
     async validate(payload: any){
         console.log({payload})
-        return { user: payload.sub, username: payload.username }
+        return { userId: payload.sub.userId, username: payload.username, userRole:payload.sub.userRole }
     }
 }

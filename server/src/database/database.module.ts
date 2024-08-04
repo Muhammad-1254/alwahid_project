@@ -13,6 +13,7 @@ import { UserBlockAssociation } from "src/user/entities/user-block-association.e
 import { CreatorUser } from "src/user/entities/user-creator.entity";
 import { UserFollowingAssociation } from "src/user/entities/user-followers-association.entity";
 import { NormalUser } from "src/user/entities/user-normal.entity";
+import { UserSavedPostsAssociation } from "src/user/entities/user-saved-post.entity";
 import { User } from "src/user/entities/user.entity";
 
 @Global()
@@ -45,9 +46,10 @@ import { User } from "src/user/entities/user.entity";
           PostMedia,
           Hashtag,
           HashtagPostAssociation,
+          UserSavedPostsAssociation
           
         ],
-        synchronize: true,
+        synchronize: false,
       }),
     }),
     TypeOrmModule.forFeature([
@@ -64,6 +66,7 @@ import { User } from "src/user/entities/user.entity";
       PostMedia,
       Hashtag,
       HashtagPostAssociation,
+      UserSavedPostsAssociation
     ]),
   ],
 

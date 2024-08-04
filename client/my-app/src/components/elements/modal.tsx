@@ -10,6 +10,7 @@ type ModalProps = {
   children: React.ReactNode;
   transparent?: boolean;
   showStatusBar?: boolean;
+  bgOpacity?: number;
 };
 const Modal: FC<ModalProps> = ({
   children,
@@ -19,6 +20,7 @@ const Modal: FC<ModalProps> = ({
   withInput,
   transparent,
   showStatusBar,
+  bgOpacity
 }) => {
   const content = withInput ? (
     <KeyboardAvoidingView
@@ -30,9 +32,10 @@ const Modal: FC<ModalProps> = ({
 
   return (
     <RNModal
-      visible={visible}
+
+    visible={visible}
       transparent={transparent}
-    
+      onRequestClose={() => setVisible && setVisible(false)}
       statusBarTranslucent={showStatusBar}
       animationType={animationType || "slide"}
     >
@@ -42,7 +45,8 @@ const Modal: FC<ModalProps> = ({
 
       <Pressable
         onPress={() => setVisible && setVisible(false)}
-        className="absolute top-0 left-0  w-full h-full -z-10   bg-background dark:bg-backgroundDark opacity-50 "/>
+    style={{opacity:bgOpacity??0.5}}
+className="absolute opacity-5 top-0 left-0  w-full h-full -z-10   bg-background dark:bg-backgroundDark  "/>
 
         <View className="z-10  ">{content}</View>
         </View>

@@ -1,47 +1,79 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, UseFilters, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Request,
+  UseFilters,
+  UseGuards,
+} from "@nestjs/common";
 import { AllExceptionFilter } from "src/all-exceptions.filter";
 import { JwtAccessTokenGuard } from "src/auth/guards/jwt-access-token.guard";
-import { RolesGuard } from "src/auth/guards/roles.guard";
-import { Roles } from "src/auth/roles.decorator";
-import { UserRoleEnum } from "src/lib/types/user";
 import { PostService } from "../post.service";
 import { MyLoggerService } from "src/my-logger/my-logger.service";
-import { CreatePostCommentDto, createPostLikeDto } from "../dto/create-post.dto";
+import {
+  CreatePostCommentDto,
+  createPostCommentLikeDto,
+  createPostLikeDto,
+  createUserSavedPostDto,
+} from "../dto/create-post.dto";
 import { updatePostCommentContentDto } from "../dto/update-post.dto";
 
 @UseFilters(AllExceptionFilter)
-@UseGuards(JwtAccessTokenGuard, RolesGuard)
+@UseGuards(JwtAccessTokenGuard)
 @Controller()
 export class PostForAllUsersController {
   constructor(private readonly postService: PostService) {}
   private readonly logger = new MyLoggerService(PostForAllUsersController.name);
-  
-  @Post("post/comment")
-  createPostComment(@Body() createPostDto: CreatePostCommentDto) {
-    this.postService.createPostComment(createPostDto);
-  }
-  @Roles(UserRoleEnum.ADMIN, UserRoleEnum.CREATOR, UserRoleEnum.NORMAL)
-  @Post("post/like")
-  createPostLike(@Request() req,@Body() createLike: createPostLikeDto) {
-    this.postService.createPostLike(req.user, createLike);
-  }
-  // @Post("post/comment/like")
-  // createPostCommentLike(@Body() createLike: createPostCommentLikeDto) {
-  //   this.postService.createPostCommentLike(createLike);
-  // }
 
-  @Get("post/user/likes/personal")
-  findUserLikesOnPost(@Request() req, @Query("from") from, @Query("to") to) {
-    return this.postService.findUserLikesOnPost(req.user, from, to);
+  @Post("post/comment")
+  createPostComment(@Request() req, @Body() createPostDto: CreatePostCommentDto) {
+    this.postService.createPostComment(req.user, createPostDto);
   }
-  
+  @Post("post/like")
+  createLikePost(@Request() req, @Body() createLike: createPostLikeDto) {
+    this.postService.createLikePost(req.user, createLike);
+  }
+
+  @Post("post/save")
+  createSavePost(
+    @Request() req,
+    @Body() createSaved: createUserSavedPostDto,
+  ) {
+    return this.postService.createSavePost(req.user, createSaved);
+  }
+
+  @Post("post/comment/like")
+  createPostCommentLike(@Request() req, @Body() createLike: createPostCommentLikeDto) {
+    this.postService.createPostCommentLike(req.user,createLike);
+  }
+
+  @Get("post/user/liked/personal")
+  findUserPersonalLikedPosts(
+    @Request() req,
+    @Query("from") from,
+    @Query("to") to,
+  ) {
+    return this.postService.findUserPersonalLikedPosts(req.user, from, to);
+  }
+  @Get("post/user/saved/personal")
+  findUserPersonalSavedPosts(
+    @Request() req,
+    @Query("from") from,
+    @Query("to") to,
+  ) {
+    return this.postService.findUserPersonalSavedPosts(req.user, from, to);
+  }
 
   @Get("post")
   findAllPosts(@Query("from") from: number, @Query("to") to: number) {
     return this.postService.findAllPosts(from, to);
   }
 
-  
   @Get("post/comments")
   findAllComments(
     @Query("postId") postId: string,
@@ -69,17 +101,10 @@ export class PostForAllUsersController {
     return this.postService.findAllCommentLikes(commentId, from, to);
   }
 
- 
-
-
   @Patch("post/comment")
   updatePostCommentContent(@Body() updateComment: updatePostCommentContentDto) {
     return this.postService.updatePostCommentContent(updateComment);
   }
-
-
-
- 
 
   @Delete("post/comment/:id")
   removePostComment(@Param("id") id: string) {

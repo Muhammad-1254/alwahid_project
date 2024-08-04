@@ -8,6 +8,7 @@ import { Location } from "src/location/entities/location.entity";
 import { Post } from "src/post/entities/post.entity";
 import { PostComments } from "src/post/entities/post-comment.entity";
 import { UserBlockAssociation } from "./user-block-association.entity";
+import { UserSavedPostsAssociation } from "./user-saved-post.entity";
 
 @Entity("users")
 export class User extends ParentEntity<User> {
@@ -32,14 +33,14 @@ export class User extends ParentEntity<User> {
   @Column({ nullable: true, type: "int" })
   age: number;
 
-  @Column({ nullable: true, type: "varchar" })
+  @Column({ nullable: true,unique:true, type: "varchar" })
   phoneNumber: string;
 
   @Column({ type: "enum", enum: GenderEnum })
   gender: GenderEnum;
 
-  @Column({ type: "enum", enum: UserRoleEnum })
-  userRole: UserRoleEnum;
+  @Column({ type: "enum",enum:UserRoleEnum, array: true, })
+  userRoles: UserRoleEnum[];
 
   @Column({nullable:true, type: "date" })
   dateOfBirth: Date;
@@ -127,4 +128,9 @@ export class User extends ParentEntity<User> {
 
   @OneToMany(()=>UserBlockAssociation,userBlockAssociation=>userBlockAssociation.blockedFromUsers)
   blockedToUsers:UserBlockAssociation[]
+
+  // user saved post relationship
+  @OneToMany(()=>UserSavedPostsAssociation,userSavedPostsAssociation=>userSavedPostsAssociation.user)
+  savedPosts:UserSavedPostsAssociation[]
+
 }

@@ -1,88 +1,77 @@
 import { useState } from "react";
-import {
-  Alert,
-  View,
-  TextInput,
-  Text,
-  Pressable,
-  ScrollView,
-} from "react-native";
-import { Link, usePathname, useRouter } from "expo-router";
-import { z } from "zod";
+import { View, TextInput, Text, Pressable, ScrollView } from "react-native";
+import { Link, useRouter } from "expo-router";
 import axios from "axios";
 import { apiRoutes } from "@/src/constants/apiRoutes";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useDispatch } from "react-redux";
-import { setUser as setGlobalUser } from "@/src/store/slices/auth";
-const LoginSchema = z.object({
-  email: z
-    .string()
-    .email("Invalid email")
-    .min(8, "Email must be at least 8 characters"),
-  password: z.string().min(6, "Password must be at least 6 characters "),
-});
-type LoginFormValues = z.infer<typeof LoginSchema>;
-type LoginFormError = Partial<Record<keyof LoginFormValues, string>>;
+import Checkbox from "expo-checkbox";
+import { UserRoleEnum } from "@/src/types/user";
+import { AuthLoadingModal } from "./signup";
+import { setIsAuthenticated, setUserRole } from "@/src/store/slices/auth";
+
 type InitialLoginStateProps = {
   email: string;
   password: string;
-  errors: LoginFormError;
+  userRole: UserRoleEnum;
+  errors: { email?: string; password?: string, userRole?: UserRoleEnum};
 };
 export default function Login() {
   const [user, setUser] = useState<InitialLoginStateProps>({
     email: "usman@gmail.com",
     password: "usman123",
+    userRole: UserRoleEnum.NORMAL,
     errors: {},
   });
+
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const dispatch = useDispatch();
+
   async function handleLogin() {
-    console.log("clicked");
-    const validation = LoginSchema.safeParse({
-      email: user.email,
-      password: user.password,
-    });
-    if (!validation.success) {
-      const fieldErrors = validation.error.errors.reduce((acc, err) => {
-        acc[err.path[0] as keyof LoginFormValues] = err.message;
-        return acc;
-      }, {} as LoginFormError);
-      setUser({ ...user, errors: { ...fieldErrors } });
-    } else {
+    if(!user.email){
+      setUser({...user, errors:{email: "Email is required"}});
+    }
+    if(!user.password || user.password.length < 6){
+      setUser({...user, errors:{password: "Password must be at least 6 characters long"}});
+    }
+
       try {
         setUser({ ...user, errors: {} });
         setLoading(true);
         const res = await axios.post(apiRoutes.login, {
           username: user.email,
           password: user.password,
+          role: user.userRole,
         });
+
         if (
           (res.status === 200 || res.status === 201) &&
-          res.data.access_token &&
-          res.data.refresh_token
+          res.data.accessToken &&
+          res.data.accessToken
         ) {
           // save token to local storage
-          await AsyncStorage.setItem("accessToken", res.data.access_token);
-          await AsyncStorage.setItem("refreshToken", res.data.refresh_token);
-          // saving user data to state
-          dispatch(
-            setGlobalUser({
-              ...res.data.user
-            })
-          );
-          router.navigate("(tabs)");
+          await AsyncStorage.setItem("accessToken", res.data.accessToken);
+          await AsyncStorage.setItem("refreshToken", res.data.accessToken);
+          
+          // save user data to redux
+          dispatch(setIsAuthenticated(true));
+
+          setLoading(false);
+          await new Promise((res) => setTimeout(res, 1000));
+          router.replace("/(tabs)");
         }
         setLoading(false);
       } catch (error) {
         console.log({ error });
         setLoading(false);
       }
-    }
+    
   }
 
   return (
     <ScrollView className="bg-background dark:bg-backgroundDark pt-16">
+      <AuthLoadingModal loading={loading} />
       <View className="w-[95%] gap-y-5 mx-auto">
         <Text
           className="text-primary dark:text-primaryDark 
@@ -96,7 +85,7 @@ export default function Login() {
           </Text>
           <TextInput
             onChangeText={(t) => setUser({ ...user, email: t })}
-            value={user.email}
+            value={user .email}
             placeholder="jonDoe@address.com"
             autoCapitalize={"none"}
             keyboardType="email-address"
@@ -126,6 +115,47 @@ export default function Login() {
               {user.errors.password}
             </Text>
           )}
+        </View>
+        <View className="flex-row items-center justify-evenly">
+          <View className="flex-row  items-center justify-normal gap-x-2">
+            <Checkbox
+              value={
+                user.userRole === undefined
+                  ? false
+                  : user.userRole === UserRoleEnum.NORMAL
+              }
+              onValueChange={() =>
+                setUser({ ...user, userRole: UserRoleEnum.NORMAL })
+              }
+            />
+            <Text className="text-primary dark:text-primaryDark">Normal</Text>
+          </View>
+          <View className="flex-row  items-center justify-normal gap-x-2">
+            <Checkbox
+              value={
+                user.userRole === undefined
+                  ? false
+                  : user.userRole === UserRoleEnum.CREATOR
+              }
+              onValueChange={() =>
+                setUser({ ...user, userRole: UserRoleEnum.CREATOR })
+              }
+            />
+            <Text className="text-primary dark:text-primaryDark">Creator</Text>
+          </View>
+          <View className="flex-row  items-center justify-normal gap-x-2">
+            <Checkbox
+              value={
+                user.userRole === undefined
+                  ? false
+                  : user.userRole === UserRoleEnum.ADMIN
+              }
+              onValueChange={() =>
+                setUser({ ...user, userRole: UserRoleEnum.ADMIN })
+              }
+            />
+            <Text className="text-primary dark:text-primaryDark">Admin</Text>
+          </View>
         </View>
 
         <Pressable

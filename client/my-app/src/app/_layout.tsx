@@ -18,6 +18,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { PersistGate } from "redux-persist/integration/react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import Toast from 'react-native-toast-message';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -41,9 +42,9 @@ export default function RootLayout() {
   return (
     
     <SafeAreaProvider>
-    <GestureHandlerRootView >
+    <GestureHandlerRootView  style={{ flex:1}} >
 <BottomSheetModalProvider>
- 
+<Toast/>
       <StoreProvider store={store}>
         <PersistGate loading={null} persistor={persistor}>
           <AuthProvider>

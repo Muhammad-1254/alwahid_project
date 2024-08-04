@@ -1,5 +1,3 @@
-// @ts-ignore
-import fracty from "fracty";
 import {
   View,
   Text,
@@ -34,7 +32,6 @@ import {
 import { useAppSelector } from "@/src/hooks/redux";
 export default function Home() {
   const auth = useAppSelector(state=>state.auth)
-  console.log({auth})
   const dispatch = useDispatch();
   useEffect(() => {
     dispatch(setHomePageData(homePageData));
@@ -307,10 +304,9 @@ export const HomePagePostMediaItemEach = ({
       Image.getSize(
         item.url,
         (originalW, originalH) => {
-          const ar = fracty(originalW / originalH);
           setAspectRatio(
-            ar?.split(" ").length > 1 ? ar?.split(" ")[1] : "auto"
-          );
+              `${(originalW / originalH)}`
+            );
         },
         (error) => {
           console.log(`Couldn't get the image size: ${error.message}`);

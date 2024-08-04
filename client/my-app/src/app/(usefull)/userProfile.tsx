@@ -5,6 +5,7 @@ import {
   TextInput,
   Pressable,
   Switch,
+  Alert,
 } from "react-native";
 import React, { useState } from "react";
 import { Stack, useRouter } from "expo-router";
@@ -12,12 +13,33 @@ import { useColorScheme } from "nativewind";
 import { Colors } from "@/src/constants/Colors";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useAppSelector } from "@/src/hooks/redux";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useDispatch } from "react-redux";
+import { setIsAuthenticated, setUser, userDataInitialState } from "@/src/store/slices/auth";
 
 export default function UserProfile() {
   const [search, setSearch] = useState("");
   const { colorScheme, toggleColorScheme } = useColorScheme();
   const router = useRouter();
+  const dispatch = useDispatch();
   const user = useAppSelector((state) => state.auth);
+  const logoutHandler = async () => {
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "OK",
+        onPress: async () => {
+          await AsyncStorage.clear();
+          dispatch(setIsAuthenticated(false));
+          dispatch(setUser(userDataInitialState));
+          router.navigate("(auth)/login");
+        },
+      },
+    ]);
+  };
   return (
     <>
       <Stack.Screen
@@ -75,8 +97,9 @@ export default function UserProfile() {
               onChange={toggleColorScheme}
             />
           </View>
+          
 
-          {(user.data.role === "admin" || user.data.role === "creator") && (
+          {(user.userRole === "admin" || user.userRole === "creator") && (
             <Pressable
               className="w-full flex-row items-center justify-between 
             bg-card dark:bg-cardDark  mb-4
@@ -97,6 +120,21 @@ export default function UserProfile() {
               />
             </Pressable>
           )}
+           <View className="w-full flex-row items-center justify-between mb-4">
+            <Text className="text-primary dark:text-primaryDark text-base">
+              Logout
+            </Text>
+            <MaterialIcons
+              name="logout"
+              size={32}
+              color={
+                colorScheme === "dark"
+                  ? Colors.dark.destructive
+                  : Colors.light.destructive
+              }
+              onPress={logoutHandler}
+              />
+          </View>
         </View>
       </ScrollView>
     </>

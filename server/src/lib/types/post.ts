@@ -33,7 +33,7 @@ export type commentsResponseDataType = {
     firstname:string,
     lastname:string,
     avatarUrl:string,
-    userRole:UserRoleEnum,
+    userRoles:UserRoleEnum[],
     isSpecialUser:boolean,
     isVerified:boolean
     commentId:string,
@@ -47,7 +47,7 @@ export type postCommentLikesResponseDataType = {
     firstname:string,
     lastname:string,
     avatarUrl:string,
-    userRole:UserRoleEnum,
+    userRoles:UserRoleEnum[],
     isSpecialUser:boolean,
     isVerified:boolean,
     likeId:string,

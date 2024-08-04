@@ -54,9 +54,9 @@ export class CreateUserAdminUserDTO extends CreateUserDto{
 class CreateUserCreatorUserDTO {
 
     @IsNotEmpty()
-    @IsUUID()
-    userId:string
- 
+    @IsUUID("4")
+    adminId:string
+
     @IsNotEmpty()
     @IsString()
     @IsEnum(QualificationEnum,{message:"Valid qualification required!"})
@@ -74,8 +74,8 @@ class CreateUserCreatorUserDTO {
 export class CreateUserCreatorUserRequestAdminDTO extends CreateUserCreatorUserDTO{}
 export class CreateUserApprovedCreatorUserDTO extends CreateUserCreatorUserDTO{
   @IsNotEmpty()
-  @IsUUID()
-  adminId:string
+  @IsUUID("4")
+  userId:string
 
 }
 

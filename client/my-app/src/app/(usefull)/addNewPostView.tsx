@@ -1,6 +1,7 @@
 import {
   FlatList,
   Button,
+  View,
 } from "react-native";
 import React,{useRef} from "react";
 import { Stack, useRouter } from "expo-router";
@@ -19,6 +20,7 @@ import * as FileSystem from "expo-file-system";
 import { Buffer } from "buffer";
 import axios from "axios";
 import { LoadingIndicatorModal, RenderFlatListItem } from "@/src/components/AddNewPostViewC";
+import Modal from "@/src/components/elements/modal";
 
 const AddNewPostView = () => {
   const abortController = useRef(new AbortController());

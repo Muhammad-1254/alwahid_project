@@ -8,6 +8,7 @@ import { PostCommentLike } from "./post-comment-like.entity";
 import { PostComments } from "./post-comment.entity";
 import { User } from "src/user/entities/user.entity";
 import { HashtagPostAssociation } from "src/hashtag/entities/hashtag-post-association.entity";
+import { UserSavedPostsAssociation } from "src/user/entities/user-saved-post.entity";
 
 
 
@@ -64,6 +65,8 @@ export class Post extends ParentEntity<Post> {
     @OneToMany(()=>HashtagPostAssociation, hashtagPostAssociation=>hashtagPostAssociation.post)
     postHashtag:HashtagPostAssociation[]
     
+    @OneToMany(()=>UserSavedPostsAssociation,userSavedPostsAssociation=>userSavedPostsAssociation.post)
+    savedByUsers:UserSavedPostsAssociation[]
 }
 
 

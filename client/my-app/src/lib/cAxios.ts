@@ -1,9 +1,10 @@
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Redirect } from 'expo-router';
+import { apiRoutes } from '../constants/apiRoutes';
+import { router } from 'expo-router';
 
 const cAxios = axios.create({
-  baseURL: process.env.EXPO_PUBLIC_SERVER_DOMAIN_DEV?.toString()+"/api",
+  baseURL: ""
 });
 
 // Request interceptor to add token to headers
@@ -23,23 +24,47 @@ cAxios.interceptors.response.use((response) => {
 }, async (error) => {
   if(!error.response){
     // handling network error
-    console.log(error.message)
+    console.log("error message from cAxios: ",error.message)
     return Promise.reject(error)
   }
   const originalRequest = error.config;
+      // Check if the error status is 401 and retry flag is not set
   if (error.response.status === 401 && !originalRequest._retry) {
     originalRequest._retry = true;
-    const refreshToken = await AsyncStorage.getItem('refreshToken');
-    return cAxios.post('/auth/refresh-token', { refreshToken })
-      .then(async (res) => {
-        if (res.status === 200) {
-          await AsyncStorage.setItem('accessToken', res.data.access_token);
-          await AsyncStorage.setItem('refreshToken', res.data.refresh_token);
-          cAxios.defaults.headers.common['Authorization'] = `Bearer ${res.data.access_token}`;
-          originalRequest.headers['Authorization'] = `Bearer ${res.data.access_token}`;
-          return cAxios(originalRequest);
-        }
-      });
+    
+    // try to refresh the token 
+    try {
+      const refreshToken = await AsyncStorage.getItem("refreshToken")
+      const accessToken = await AsyncStorage.getItem("accessToken")
+      console.log("refreshToken: ",refreshToken)
+      console.log("accessToken: ",accessToken)
+      console.log("sending request to get new access token")
+      const response = await axios.post(apiRoutes.getAccessToken,{refreshToken})
+      console.log("response status from get new access token: ",response.status)
+      if(response.status ===200){
+        const {accessToken,refreshToken} = response.data
+
+        // save new tokens
+        await AsyncStorage.setItem('accessToken', accessToken);
+        await AsyncStorage.setItem('refreshToken', refreshToken);
+
+        // set the new accessToken in the request headers
+        cAxios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`
+        originalRequest.headers['Authorization'] = `Bearer ${accessToken}`
+
+        // retry the original request with the new accessToken
+        console.log("retrying the original request with new access token")
+        return cAxios(originalRequest)
+
+      }
+    } catch (refreshError) {
+      // if this fails, logout the user
+      console.error("Token refresh failed: ",refreshError)
+      await AsyncStorage.removeItem('accessToken');
+      await AsyncStorage.removeItem('refreshToken');
+      router.navigate("(auth)/login")
+    }
+  
   }
   return Promise.reject(error);
 });

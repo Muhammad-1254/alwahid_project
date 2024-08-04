@@ -3,24 +3,17 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import {
-  CreateUserAdminUserDTO,
-  CreateUserApprovedCreatorUserDTO,
-  CreateUserCreatorUserRequestAdminDTO,
-  CreateUserDto,
-  createUserLocationDTO,
-} from "./dto/create-user.dto";
+import { createUserLocationDTO } from "./dto/create-user.dto";
 import { EntityManager, Repository } from "typeorm";
 import { User } from "./entities/user.entity";
 import { InjectRepository } from "@nestjs/typeorm";
 import { CreatorUser } from "./entities/user-creator.entity";
 import { v4 as uuid } from "uuid";
-import { NormalUser } from "./entities/user-normal.entity";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { Location } from "src/location/entities/location.entity";
 import { JwtAuthGuardTrueType, UserRoleEnum } from "src/lib/types/user";
 import { AdminUser } from "./entities/user-admin.entity";
-import { prefixSplitNestingObject, userDataResponse } from "src/lib/utils";
+import { prefixSplitNestingObject } from "src/lib/utils";
 import { UserFollowingAssociation } from "./entities/user-followers-association.entity";
 
 @Injectable()
@@ -30,98 +23,6 @@ export class UserService {
     private readonly userRepository: Repository<User>,
     private readonly entityManager: EntityManager,
   ) {}
-
-  async createUserNormalUser(createUser: CreateUserDto) {
-    const userId = uuid();
-    const normalUser = new NormalUser({
-      ...createUser,
-      userId,
-      user: new User({
-        ...createUser,
-        userRole: UserRoleEnum.NORMAL,
-        id: userId,
-      }),
-    });
-
-    await this.entityManager.save(normalUser);
-  }
-
-  async createUserCreatorUserRequestAdmin(
-    createUser: CreateUserCreatorUserRequestAdminDTO,
-  ) {
-    // check if user exist by userId
-    const userExist = await this.entityManager.findOne(User, {
-      where: { id: createUser.userId },
-    });
-    if (!userExist) {
-      return { message: "User not found" };
-    }
-    // check user role is normal
-    if (userExist.userRole !== UserRoleEnum.NORMAL) {
-      return {
-        message: `User role is not normal!, user role is :${userExist.userRole}`,
-      };
-    }
-    // check user is verified or not
-    if (!userExist.isVerified) {
-      return { message: "User is not verified" };
-    }
-
-    // console.log({userExist})
-
-    // send request to admin for approving user request to be as creator
-    // for now admin accept request
-    return { message: "Send request to admin successfully", data: userExist };
-  }
-
-  async createUserApprovedCreatorUser(
-    createUser: CreateUserApprovedCreatorUserDTO,
-  ) {
-    // first create user as creator
-    const date = new Date();
-    const creatorUser = new CreatorUser({
-      userId: createUser.userId,
-      authorizedAt: date,
-      worksOn: createUser.worksOn,
-      qualification: createUser.qualification,
-      authorizedAdminId: createUser.adminId,
-    });
-    // create creator work location
-    const locationId = uuid();
-    const location = new Location({
-      id: locationId,
-      workUserId: createUser.userId,
-      ...createUser.workLocation,
-    });
-    await this.entityManager.transaction(async entityManager => {
-      await entityManager.save(creatorUser);
-      await this.entityManager.save(location);
-
-      // now updating the user role in user table
-      await entityManager.update(
-        User,
-        { id: createUser.userId },
-        { userRole: UserRoleEnum.CREATOR },
-      );
-    });
-
-    return { message: "Creator created successfully", data: createUser };
-  }
-
-  async createUserAdminUser(createUser: CreateUserAdminUserDTO) {
-    const userId = uuid();
-    const adminUser = new AdminUser({
-      ...createUser,
-      userId,
-      user: new User({
-        ...createUser,
-        userRole: UserRoleEnum.ADMIN,
-        id: userId,
-      }),
-    });
-    await this.entityManager.save(adminUser);
-    return { message: "Admin created successfully", data: adminUser };
-  }
 
   async createUserLocation(createUserLocation: createUserLocationDTO) {
     const locationId = uuid();
@@ -161,8 +62,9 @@ export class UserService {
   async findOne(id: string) {
     const user = await this.userRepository.findOne({ where: { id } });
     if (!user) throw new NotFoundException("User not found");
-    return userDataResponse(user);
+    return user;
   }
+  
   async getUserProfile(user: JwtAuthGuardTrueType) {
     const profileData = await this.entityManager
       .createQueryBuilder(User, "user")
@@ -174,7 +76,6 @@ export class UserService {
         "user.gender",
         "user.avatarUrl",
         "user.isSpecialUser",
-        "user.userRole",
       ])
       .groupBy("user.id")
       .addGroupBy("user.email")
@@ -183,7 +84,6 @@ export class UserService {
       .addGroupBy("user.gender")
       .addGroupBy("user.avatarUrl")
       .addGroupBy("user.isSpecialUser")
-      .addGroupBy("user.userRole")
 
       // getting following count
       .leftJoin("user.following", "following")
@@ -196,7 +96,7 @@ export class UserService {
       .where("user.id = :id", { id: user.userId })
       .getRawOne();
     const data = prefixSplitNestingObject(profileData);
-    return data;
+    return {...data,user:{...data.user,userRole:user.userRole}};
   }
   async getUserProfileComplete(user: JwtAuthGuardTrueType) {
     let query = await this.entityManager
@@ -312,20 +212,20 @@ export class UserService {
           "creatorAuthorizedBy",
           "creatorAuthorizedBy.userId = authorizedAdminId",
         )
-      .addSelect([
-        "creatorAuthorizedBy.id",
-        "creatorAuthorizedBy.email",
-        "creatorAuthorizedBy.firstname",
-        "creatorAuthorizedBy.lastname",
-        "creatorAuthorizedBy.avatarUrl",
-        "creatorAuthorizedBy.isSpecialUser",
-      ])
-      .addGroupBy("creatorAuthorizedBy.id")
-      .addGroupBy("creatorAuthorizedBy.email")
-      .addGroupBy("creatorAuthorizedBy.firstname")
-      .addGroupBy("creatorAuthorizedBy.lastname")
-      .addGroupBy("creatorAuthorizedBy.avatarUrl")
-      .addGroupBy("creatorAuthorizedBy.isSpecialUser");
+        .addSelect([
+          "creatorAuthorizedBy.id",
+          "creatorAuthorizedBy.email",
+          "creatorAuthorizedBy.firstname",
+          "creatorAuthorizedBy.lastname",
+          "creatorAuthorizedBy.avatarUrl",
+          "creatorAuthorizedBy.isSpecialUser",
+        ])
+        .addGroupBy("creatorAuthorizedBy.id")
+        .addGroupBy("creatorAuthorizedBy.email")
+        .addGroupBy("creatorAuthorizedBy.firstname")
+        .addGroupBy("creatorAuthorizedBy.lastname")
+        .addGroupBy("creatorAuthorizedBy.avatarUrl")
+        .addGroupBy("creatorAuthorizedBy.isSpecialUser");
     } // if user is admin then getting admin data
     else if (user.userRole === UserRoleEnum.ADMIN) {
       query = query
@@ -426,8 +326,8 @@ export class UserService {
 
   async unFollowToAnotherUser(userId: string, followingId: string) {
     await this.entityManager.delete(UserFollowingAssociation, {
-       userId,
-       followingId,
+      userId,
+      followingId,
     });
     return { message: "User un follow successfully" };
   }
@@ -448,10 +348,15 @@ export class UserService {
     return { message: "User deleted successfully", data: userToDelete };
   }
 
-  async findOneWithEmail(email: string) {
-    return await this.userRepository.findOne({ where: { email } });
-  }
-  async findOneWithPhoneNumber(phoneNumber: string) {
-    return await this.userRepository.findOne({ where: { phoneNumber } });
+
+  async findOneWithEmailOrPhoneNumberForLogin({email,phoneNumber}:{email?:string,phoneNumber?: string}) {
+    if(!email&& !phoneNumber){
+      throw new Error("Email or Phone number is required for login");
+    }
+    return  await this.userRepository.findOne({
+      where: {email, phoneNumber},
+      loadEagerRelations: false,
+      select:['id','email', 'phoneNumber','password','userRoles']
+    });
   }
 }

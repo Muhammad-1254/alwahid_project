@@ -36,6 +36,21 @@ export default function _layout() {
         name="login"
         options={{
           headerTitle: "Login",
+          headerLeft: () => (
+            <Ionicons
+              name="arrow-back"
+              style={{ paddingRight: 20 }}
+              onPress={() => {
+                router.back();
+              }}
+              size={24}
+              color={
+                colorScheme === "dark"
+                  ? Colors.dark.primary
+                  : Colors.light.primary
+              }
+            />
+          ),
         }}
       />
       <Stack.Screen

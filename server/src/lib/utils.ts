@@ -1,32 +1,16 @@
-import { User } from "src/user/entities/user.entity";
 
-export const userDataResponse = (user: User) => {
-  return {
-    userId: user.id,
-    email: user.email,
-    firstname: user.firstname,
-    lastname: user.lastname,
-    avatar: user.avatarUrl,
-    age: user.age,
-    phoneNumber: user.phoneNumber,
-    gender: user.gender,
-    role: user.userRole,
-    dob: user.dateOfBirth,
-    authProvider: user.authProvider,
-    isVerified: user.isVerified,
-    isSpecialUser: user.isSpecialUser,
-  };
-};
 
-export const prefixSplitNestingObject = (data: any) => {
+
+export const prefixSplitNestingObject = (data: any, skipKey?:string) => {
   const result: any = {};
   for (const key in data) {
+    
     if (data.hasOwnProperty(key)) {
       // Split the key by underscore
       const parts = key.split("_");
       const prefix = parts[0];
+            if(skipKey &&(skipKey === prefix)) continue;
       const current = result;
-
       if (!current[prefix]) {
         current[prefix] = {};
       }
