@@ -19,7 +19,7 @@ import {
   getImageAspectRatio,
   getAspectRatio,
 } from "@/src/lib/utils";
-import { EvilIcons, Ionicons } from "@expo/vector-icons";
+import { AntDesign, EvilIcons, Ionicons } from "@expo/vector-icons";
 import { useColorScheme } from "nativewind";
 import { Colors } from "@/src/constants/Colors";
 import Modal from "@/src/components/elements/modal";
@@ -126,7 +126,7 @@ export default function PostDetailsScreen() {
       {!data || loading ? (
         <Text className="text-red-600">loading...</Text>
       ) : (
-        <View className="flex-1">
+        <View className="flex-1 justify-end">
           <ScrollView className="flex-1 bg-background dark:bg-backgroundDark pt-4">
             <PostUserComponent
               createdAt={data.post.createdAt}
@@ -139,6 +139,7 @@ export default function PostDetailsScreen() {
           </ScrollView>
           <PublicInteractions
             data={{
+              postId:typeof postId==='string'?postId:postId[0],
               lastLike: data.lastLike,
               lastLikeUser: data.lastLikeUser,
               lastComment: data.lastComment,
@@ -454,6 +455,7 @@ const MediaViewModal: FC<MediaViewModalProps> = ({
 
 type PublicInteractionsProps = {
   data: {
+    postId:string,
     lastLike: { likeType: string | null };
     lastLikeUser: LastUserInteraction;
     lastComment: { createdAt: string | null; content: string | null };
@@ -466,6 +468,7 @@ type PublicInteractionsProps = {
 const PublicInteractions: FC<PublicInteractionsProps> = ({ data }) => {
   const {
     commentsCount,
+    postId,
     isCurrentUserLiked,
     lastComment,
     lastCommentUser,
@@ -476,98 +479,164 @@ const PublicInteractions: FC<PublicInteractionsProps> = ({ data }) => {
   const { colorScheme } = useColorScheme();
   const [isSave, setIsSaved] = useState(false);
   const [isLiked, setIsLiked] = useState(isCurrentUserLiked !== null);
+  const [loading,setLoading] = useState(false)
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+
+  const router = useRouter ()
+
   const lastLikeUsername =
     lastLikeUser?.firstname + " " + lastLikeUser?.lastname;
   const likesCountNumber = Number.parseInt(likesCount);
-  const savePost = () => {
-    console.log("save post");
+  
+
+  const likePostHandler =async ()=>{
+    const body = {
+      postId,
+      likeType:'like'
+    }
+    console.log({body})
+    try {
+      setLoading(true)
+      const res = await cAxios.post(apiRoutes.createPostLike,body)
+      if(res.status === 201){
+        setIsLiked(true)
+      }else{
+        setIsLiked(false)
+      }
+      console.log(res.data.message)
+    } catch (error) {
+      console.log("error while liking post")
+    }finally{
+      setLoading(false)
+    }
+  }
+  
+  const commentPostHandler =()=>{
+    router.push({pathname:`/(usefull)/(modals)/comments/[postId]`,params:{postId}})
+  }
+  const savePostHandler =async () => {
+    const body = {
+      postId,
+    }
+    console.log({body})
+    try {
+      setLoading(true)
+      const res = await cAxios.post(apiRoutes.createPostSave,body)
+      if(res.status === 201){
+        setIsSaved(true)
+      }else{
+        setIsSaved(false)
+      }
+      console.log(res.data.message)
+    } catch (error) {
+      console.log("error while saving post")
+    }finally{
+      setLoading(false)
+
+    }
   };
+  
   return (
+    <>
     <View className="w-full   bg-mutedDark">
-     
       <View className="w-full flex-row items-center justify-between  mt-1.5 ">
         <View className="flex-row items-center w-[72%] pl-1">
-         { lastLike.likeType && (
-        <>
-          <Text className="text-primary dark:text-primaryDark ">
-            {lastLike.likeType} 
-        </Text>
-          <Text className="text-primary dark:text-primaryDark ">
-            {lastLikeUsername.length > 12
-              ? lastLikeUsername.slice(0, 10) + " ..."
-              : lastLikeUsername}
-          </Text>
+          {lastLike.likeType && (
+            <>
+              <Text className="text-primary dark:text-primaryDark ">
+                {lastLike.likeType}
+              </Text>
+              <Text className="text-primary dark:text-primaryDark ">
+                {lastLikeUsername.length > 12
+                  ? lastLikeUsername.slice(0, 10) + " ..."
+                  : lastLikeUsername}
+              </Text>
 
-            {likesCountNumber - 1 >0 && (
-
-              <Text className="text-primary dark:text-primaryDark">
-            {likesCountNumber - 1}
-            {(likesCountNumber - 1) === 1?" & other":" & others"} 
-          </Text>
+              {likesCountNumber - 1 > 0 && (
+                <Text className="text-primary dark:text-primaryDark">
+                  {likesCountNumber - 1}
+                  {likesCountNumber - 1 === 1 ? " & other" : " & others"}
+                </Text>
+              )}
+            </>
           )}
-        </>  
-
-      )}
         </View>
-        <Text style={{textAlign:'right'}} className="text-primary  dark:text-primaryDark  w-[28%] pr-1">{commentsCount}&nbsp;comments </Text>
+        <Text
+          style={{ textAlign: "right" }}
+          className="text-primary  dark:text-primaryDark  w-[28%] pr-1"
+        >
+          {commentsCount}&nbsp;
+          <Text className="text-primary  dark:text-primaryDark opacity-60">
+            {commentsCount === "1" ? "comment" : "comments"}
+          </Text>
+        </Text>
       </View>
 
-<Divider styles=" bg-mutedForeground dark:bg-mutedForegroundDark my-0.5 w-full"/>
+      <Divider styles=" bg-mutedForeground dark:bg-mutedForegroundDark my-0.5 w-[95%] mx-auto opacity-30" />
 
       <View className="w-full h-16 flex-row items-center justify-between  ">
-        <EvilIcons
-          name={(isLiked || isCurrentUserLiked)?'like':'heart'}
-          size={50}
-          color={
-            colorScheme === "dark" ? Colors.dark.primary : Colors.light.primary
-          }
-          style={{
-            width:"25%",
-            height:'100%',
-            textAlign:'center',
+        <Pressable className="w-[25%] h-full items-center justify-start pt-1" onPress={likePostHandler} disabled={loading}>
+          <AntDesign
+            name={isLiked || isCurrentUserLiked ? "like1" : "like2"}
+            size={32}
+            color={
+              colorScheme === "dark"
+                ? Colors.dark.primary
+                : Colors.light.primary
+            }
+          />
+          <Text className="text-primary dark:text-primaryDark opacity-75 text-xs">
+            Like
+          </Text>
+        </Pressable>
 
-          }}
-        />
-        <EvilIcons
-          name="comment"
-          size={50}
-          color={
-            colorScheme === "dark" ? Colors.dark.primary : Colors.light.primary
-          }
-          style={{
-            width:"25%",
-            height:'100%',
+        <Pressable className="w-[25%] h-full items-center justify-start pt-1" onPress={commentPostHandler} disabled={loading}>
+          <EvilIcons
+            name="comment"
+            size={42}
+            color={
+              colorScheme === "dark"
+                ? Colors.dark.primary
+                : Colors.light.primary
+            }
+          />
+          <Text className="text-primary dark:text-primaryDark opacity-75 text-xs">
+            Comment
+          </Text>
+        </Pressable>
+        <Pressable className="w-[25%] h-full items-center justify-start pt-1">
+          <EvilIcons
+            name="share-google"
+            size={42}
+            color={
+              colorScheme === "dark"
+                ? Colors.dark.primary
+                : Colors.light.primary
+            }
+          />
+          <Text className="text-primary dark:text-primaryDark opacity-75 text-xs">
+            Share
+          </Text>
+        </Pressable>
 
-            textAlign:'center',
-          }}
-        />
-        <EvilIcons
-          name="share-google"
-          size={50}
-          color={
-            colorScheme === "dark" ? Colors.dark.primary : Colors.light.primary
-          }
-          style={{
-            width:"25%",
-            height:'100%',
-
-            textAlign:'center',
-          }}
-        />
-        <Ionicons
-          name={isSave ? "bookmark" : "bookmark-outline"}
-          size={40}
-          color={
-            colorScheme === "dark" ? Colors.dark.primary : Colors.light.primary
-          }
-          style={{
-            width:"25%",
-            height:'100%',
-            paddingTop:3,
-            textAlign:'center',
-          }}
-        />
+        <Pressable className="w-[25%] h-full items-center justify-start pt-1" onPress={savePostHandler} disabled={loading}>
+          <Ionicons
+            name={isSave ? "bookmark" : "bookmark-outline"}
+            size={35}
+            color={
+              colorScheme === "dark"
+                ? Colors.dark.primary
+                : Colors.light.primary
+            }
+          />
+          <Text className="text-primary dark:text-primaryDark opacity-75 text-xs">
+            Save
+          </Text>
+        </Pressable>
       </View>
     </View>
+  
+    </>
+
   );
 };

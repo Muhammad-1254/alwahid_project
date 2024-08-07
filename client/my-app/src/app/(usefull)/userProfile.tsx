@@ -35,7 +35,7 @@ export default function UserProfile() {
           await AsyncStorage.clear();
           dispatch(setIsAuthenticated(false));
           dispatch(setUser(userDataInitialState));
-          router.navigate("(auth)/login");
+          router.navigate("/login");
         },
       },
     ]);
@@ -104,7 +104,7 @@ export default function UserProfile() {
               className="w-full flex-row items-center justify-between 
             bg-card dark:bg-cardDark  mb-4
           "
-              onPress={() => router.push("(usefull)/addNewPost")}
+              onPress={() => router.push("/(usefull)/addNewPost")}
             >
               <Text className="text-primary dark:text-primaryDark text-base">
                 Add New Post

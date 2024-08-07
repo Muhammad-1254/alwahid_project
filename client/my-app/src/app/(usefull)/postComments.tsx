@@ -159,7 +159,6 @@ const HomePagePostUsersInteractionsDetail = (
         hello
         {/* <Ionicons name='chevron-back' style={{ transform: [{rotate: '270deg'}],marginBottom:-5}} size={25}  color={colorScheme=='dark'?Colors.dark.primary:Colors.light.primary}/> */}
         </Link>
-        <Link href={'/modal'}>model</Link>
         </View>
           </View>
         <View>

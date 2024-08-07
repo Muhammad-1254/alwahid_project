@@ -1,7 +1,6 @@
-import { View, Text } from "react-native";
+import { View, Text, Button } from "react-native";
 import React, { useCallback, useMemo, useRef } from "react";
 import BottomSheet, { BottomSheetBackdrop, BottomSheetModal } from "@gorhom/bottom-sheet";
-import { Button } from "@rneui/themed";
 
 export default function Search() {
   const snapPoints = useMemo(() => ["25%", "50%","75%","100%"], []);

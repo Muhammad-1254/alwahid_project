@@ -36,10 +36,9 @@ import cAxios from "@/src/lib/cAxios";
 import { apiRoutes } from "@/src/constants/apiRoutes";
 import { UserRoleEnum } from "@/src/types/user";
 import { ColorSchemeName } from "react-native";
-import _ from "lodash";
+import _, { set } from "lodash";
 import ContentLoader, { Facebook, Rect } from "react-content-loader/native";
 import { RefreshControl } from "react-native-gesture-handler";
-
 export default function Profile() {
   const IMG_HEIGHT = useMemo(() => 240, []);
   const scrollY = useRef(new Animated.Value(0));
@@ -64,6 +63,7 @@ export default function Profile() {
   const [refreshing, setRefreshing] = useState(false);
   const { colorScheme } = useColorScheme();
   const router = useRouter();
+
 
   // get user profile data
   useEffect(() => {
@@ -180,7 +180,7 @@ export default function Profile() {
                       : Colors.light.primary
                   }
                   style={{ marginBottom: 8 }}
-                  onPress={() => router.navigate("(usefull)/userProfile")}
+                  onPress={() => router.navigate("/(usefull)/userProfile")}
                 />
               </View>
             </>
@@ -275,7 +275,7 @@ const FlatListRenderItem: FC<FlatListRenderItemProps> = ({
         style={{ width: width / 3 }}
         className="aspect-[1/2] border border-border dark:border-borderDark rounded-md "
         key={item.id}
-        onPress={() => router.push(`postDetails/${item.id}`)}
+        onPress={() => router.push(`/postDetails/${item.id}`)}
       >
         {item.postMedias && item.postMedias.length > 0 && (
           <Image
@@ -298,7 +298,7 @@ const FlatListRenderItem: FC<FlatListRenderItemProps> = ({
         style={{ width: width / 3 }}
         className="aspect-[3/4] border border-border dark:border-borderDark rounded-md "
         key={item.id}
-        onPress={() => router.push(`postDetails/${item.id}`)}
+        onPress={() => router.push(`/postDetails/${item.id}`)}
       >
         {item.postMedias && item.postMedias.length > 0 && (
           <Image
@@ -321,7 +321,7 @@ const FlatListRenderItem: FC<FlatListRenderItemProps> = ({
         style={{ width: width / 3 }}
         className="aspect-[3/4] border border-border dark:border-borderDark rounded-md "
         key={item.id}
-        onPress={() => router.push(`postDetails/${item.id}`)}
+        onPress={() => router.push(`/postDetails/${item.id}`)}
       >
         {item.postMedias && item.postMedias.length > 0 && (
           <Image

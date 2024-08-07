@@ -62,7 +62,7 @@ cAxios.interceptors.response.use((response) => {
       console.error("Token refresh failed: ",refreshError)
       await AsyncStorage.removeItem('accessToken');
       await AsyncStorage.removeItem('refreshToken');
-      router.navigate("(auth)/login")
+      router.navigate("/login")
     }
   
   }

@@ -8,6 +8,7 @@ import {
   Button,
   TouchableHighlight,
   TouchableWithoutFeedback,
+  Pressable,
 } from "react-native";
 import { homePageData } from "@/src/constants/data";
 import React, { useEffect, useRef, useState } from "react";
@@ -39,7 +40,7 @@ export default function Home() {
 
   return (
     <View className="bg-background dark:bg-backgroundDark flex-1 items-center justify-normal gap-y-4 ">
-       
+     
       <FlatList
         className="w-full  py-4 "
         data={homePageData}

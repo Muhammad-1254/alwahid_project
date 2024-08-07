@@ -14,7 +14,6 @@ import axios from "axios";
 import { apiRoutes } from "@/src/constants/apiRoutes";
 import DatePicker from "@react-native-community/datetimepicker";
 import { useColorScheme } from "nativewind";
-import { Button } from "@rneui/themed";
 import { Fontisto, Ionicons } from "@expo/vector-icons";
 import { Colors } from "@/src/constants/Colors";
 // import PhoneInput from "react-native-phone-number-input";

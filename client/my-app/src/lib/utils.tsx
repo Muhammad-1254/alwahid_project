@@ -1,9 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { clsx, type ClassValue } from "clsx";
-import { Image } from "react-native";
+import { Image, ImageSourcePropType } from "react-native";
 import { twMerge } from "tailwind-merge";
 import * as VideoThumbnails from 'expo-video-thumbnails';
+import { PostLikeEnum } from "../types/post";
 
 
 export function cn(...inputs: ClassValue[]) {
@@ -64,4 +65,26 @@ export const getVideoPropsFromUrl = async (url: string) => {
   } catch (error) {
     console.error("error while creating thumbnail",error)
   }
+}
+
+
+// get post icons by enum
+export const getPostLikeIcon = (likeType: PostLikeEnum) => {
+  let path:string = '@/src/assets/images/post-icons';
+  let icon: ImageSourcePropType;
+  if(likeType === PostLikeEnum.HEART){
+    icon = require(path+ '/heart.png');
+  }else if(likeType === PostLikeEnum.LIKE){
+    icon = require(path+ '/like.png');
+  }else if(likeType === PostLikeEnum.LAUGH){
+    icon = require(path+ '/laugh.png');
+  }else if(likeType === PostLikeEnum.SAD){
+    icon = require(path+ '/sad.png');
+  }else if(likeType === PostLikeEnum.WOW){
+    icon = require(path+ '/wow.png');
+  }else{
+    icon = require(path+ '/like.png')
+  }
+return icon;
+
 }

@@ -20,36 +20,31 @@ const Modal: FC<ModalProps> = ({
   withInput,
   transparent,
   showStatusBar,
-  bgOpacity
+  bgOpacity,
 }) => {
   const content = withInput ? (
-    <KeyboardAvoidingView
-      behavior="padding"
-    ></KeyboardAvoidingView>
+    <KeyboardAvoidingView behavior="padding"></KeyboardAvoidingView>
   ) : (
     children
   );
 
   return (
     <RNModal
-
-    visible={visible}
+      visible={visible}
       transparent={transparent}
       onRequestClose={() => setVisible && setVisible(false)}
       statusBarTranslucent={showStatusBar}
       animationType={animationType || "slide"}
     >
-      <View       
-      className="relative w-full h-full items-center justify-center border border-gray-600">
+      <View className="relative w-full h-full items-center justify-center border border-gray-600">
+        <Pressable
+          onPress={() => setVisible && setVisible(false)}
+          style={{ opacity: bgOpacity ?? 0.5 }}
+          className={`absolute top-0 left-0  w-full h-full -z-10   bg-background dark:bg-backgroundDark  `}
+        />
 
-
-      <Pressable
-        onPress={() => setVisible && setVisible(false)}
-    style={{opacity:bgOpacity??0.5}}
-className="absolute opacity-5 top-0 left-0  w-full h-full -z-10   bg-background dark:bg-backgroundDark  "/>
-
-        <View className="z-10  ">{content}</View>
-        </View>
+        {content}
+      </View>
     </RNModal>
   );
 };
