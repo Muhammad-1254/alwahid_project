@@ -86,5 +86,28 @@ export class createUserLocationDTO extends CreateLocationDTO{
   userId:string
 }
 
+export class CreateProfilePresignedUrlDto{
+  @IsNotEmpty()
+  @IsString()
+  fileName: string;
+
+  @IsNotEmpty()
+  @IsString()
+  mimeType: string;
+
+  @IsNotEmpty()
+  @IsNumber()
+  size: number;
+}
+export class CreateProfileAvatarDto{
+  @IsNotEmpty()
+  @IsString()
+  urlKey: string;
+
+  @IsNotEmpty()
+  @IsString()
+  mimeType: string;
+}
+
 
 

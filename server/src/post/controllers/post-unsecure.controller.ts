@@ -14,4 +14,5 @@ export class PostForAnyUserController {
   findOnePost(@Param("postId") postId: string, @Query("userId") userId:string) {
     return this.postService.findOnePost(postId,userId);
   }
+ 
 }

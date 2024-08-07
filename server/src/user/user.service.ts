@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { createUserLocationDTO } from "./dto/create-user.dto";
+import { CreateProfileAvatarDto, CreateProfilePresignedUrlDto, createUserLocationDTO } from "./dto/create-user.dto";
 import { EntityManager, Repository } from "typeorm";
 import { User } from "./entities/user.entity";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -15,6 +15,10 @@ import { JwtAuthGuardTrueType, UserRoleEnum } from "src/lib/types/user";
 import { AdminUser } from "./entities/user-admin.entity";
 import { prefixSplitNestingObject } from "src/lib/utils";
 import { UserFollowingAssociation } from "./entities/user-followers-association.entity";
+import { PostService } from "src/post/post.service";
+import { ConfigService } from "@nestjs/config";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 
 @Injectable()
 export class UserService {
@@ -22,6 +26,8 @@ export class UserService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly entityManager: EntityManager,
+    private readonly postService: PostService,
+    private readonly configService: ConfigService,
   ) {}
 
   async createUserLocation(createUserLocation: createUserLocationDTO) {
@@ -58,6 +64,28 @@ export class UserService {
   findAllUsers() {
     return this.userRepository.find();
   }
+  async createProfilePresignedUrl(user: JwtAuthGuardTrueType, createPresignedUrl:CreateProfilePresignedUrlDto) {
+    const s3CLient = await this.postService.getS3Client();
+    const key = `profile-image/${user.userId}--${createPresignedUrl.fileName}`;
+    const command = new PutObjectCommand({
+      Bucket: this.configService.getOrThrow("AWS_S3_BUCKET_NAME"),
+      Key: key,
+      ContentType: createPresignedUrl.mimeType,
+    })
+    const url = await getSignedUrl(s3CLient, command, { expiresIn: 300 });
+    return { url, key };
+  }
+  
+  async updatedProfileAvatar(user:JwtAuthGuardTrueType, createProfile: CreateProfileAvatarDto){
+    const url = await this.postService.generatePresignedUrl(
+      createProfile.urlKey,
+      await this.postService.getS3Client(),
+      60*60*24*7*4*12,
+    )
+    await this.entityManager.update(User, {id:user.userId},{avatarUrl:url});  
+    return {message:"Profile image updated successfully",data:{avatarUrl:url}};
+  }
+  
 
   async findOne(id: string) {
     const user = await this.userRepository.findOne({ where: { id } });

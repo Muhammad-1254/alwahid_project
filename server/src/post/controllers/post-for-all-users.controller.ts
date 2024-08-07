@@ -4,6 +4,9 @@ import {
   Delete,
   Get,
   Param,
+  ParseBoolPipe,
+  ParseIntPipe,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -17,9 +20,11 @@ import { PostService } from "../post.service";
 import { MyLoggerService } from "src/my-logger/my-logger.service";
 import {
   CreatePostCommentDto,
-  createPostCommentLikeDto,
-  createPostLikeDto,
-  createUserSavedPostDto,
+  CreatePostCommentLikeDto,
+  CreatePostLikeDto,
+  CreateUserSavedPostDto,
+  DeletePostCommentLikeDto,
+  UpdatePostCommentLikeDto,
 } from "../dto/create-post.dto";
 import { updatePostCommentContentDto } from "../dto/update-post.dto";
 
@@ -31,25 +36,28 @@ export class PostForAllUsersController {
   private readonly logger = new MyLoggerService(PostForAllUsersController.name);
 
   @Post("post/comment")
-  createPostComment(@Request() req, @Body() createPostDto: CreatePostCommentDto) {
+  createPostComment(
+    @Request() req,
+    @Body() createPostDto: CreatePostCommentDto,
+  ) {
     this.postService.createPostComment(req.user, createPostDto);
   }
   @Post("post/like")
-  createLikePost(@Request() req, @Body() createLike: createPostLikeDto) {
+  createLikePost(@Request() req, @Body() createLike: CreatePostLikeDto) {
     this.postService.createLikePost(req.user, createLike);
   }
 
   @Post("post/save")
-  createSavePost(
-    @Request() req,
-    @Body() createSaved: createUserSavedPostDto,
-  ) {
+  createSavePost(@Request() req, @Body() createSaved: CreateUserSavedPostDto) {
     return this.postService.createSavePost(req.user, createSaved);
   }
 
   @Post("post/comment/like")
-  createPostCommentLike(@Request() req, @Body() createLike: createPostCommentLikeDto) {
-    this.postService.createPostCommentLike(req.user,createLike);
+  createPostCommentLike(
+    @Request() req,
+    @Body() createLike: CreatePostCommentLikeDto,
+  ) {
+    this.postService.createPostCommentLike(req.user, createLike);
   }
 
   @Get("post/user/liked/personal")
@@ -74,13 +82,21 @@ export class PostForAllUsersController {
     return this.postService.findAllPosts(from, to);
   }
 
-  @Get("post/comments")
-  findAllComments(
-    @Query("postId") postId: string,
-    @Query("from") from: number,
-    @Query("to") to: number,
+  @Get("post/comments/all/:postId")
+  getAllComments(
+    @Request() req,
+    @Param("postId", ParseUUIDPipe) postId: string,
+    @Query("isLatest", ParseBoolPipe) isLatest: boolean,
+    @Query("skip", ParseIntPipe) skip: number = 0,
+    @Query("take", ParseIntPipe) take: number = 10,
   ) {
-    return this.postService.findAllComments(postId, from, to);
+    return this.postService.getAllComments(
+      req.user,
+      postId,
+      isLatest,
+      skip,
+      take,
+    );
   }
 
   @Get("post/likes")
@@ -95,6 +111,7 @@ export class PostForAllUsersController {
   @Get("comments/likes")
   findAllCommentLikes(
     @Query("commentId") commentId: string,
+    @Query("isLatest") isLatest: boolean,
     @Query("from") from: number,
     @Query("to") to: number,
   ) {
@@ -105,6 +122,13 @@ export class PostForAllUsersController {
   updatePostCommentContent(@Body() updateComment: updatePostCommentContentDto) {
     return this.postService.updatePostCommentContent(updateComment);
   }
+  @Patch("post/comment/like")
+  updatePostCommentLike(
+    @Request() req,
+    @Body() updateLike: UpdatePostCommentLikeDto,
+  ) {
+    this.postService.updatePostCommentLike(req.user, updateLike);
+  }
 
   @Delete("post/comment/:id")
   removePostComment(@Param("id") id: string) {
@@ -113,5 +137,12 @@ export class PostForAllUsersController {
   @Delete("post/like/:id")
   removePostOrCommentLike(@Param("id") id: string) {
     return this.postService.removePostOrCommentLike(id);
+  }
+  @Delete("post/comment/like")
+  deletePostCommentLike(
+    @Request() req,
+    @Body() deleteLike: DeletePostCommentLikeDto,
+  ) {
+    this.postService.deletePostCommentLike(req.user, deleteLike);
   }
 }

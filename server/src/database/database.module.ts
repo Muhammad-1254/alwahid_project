@@ -70,9 +70,7 @@ import { User } from "src/user/entities/user.entity";
     ]),
   ],
 
-  // providers: [DatabaseService],
   exports: [
-    // DatabaseService,
     TypeOrmModule,
   ],
 })

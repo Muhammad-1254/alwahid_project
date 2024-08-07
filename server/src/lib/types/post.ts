@@ -21,11 +21,15 @@ export enum PostLikeTargetEnum {
     COMMENT = "comment",
 }
 
+
 export enum PostLikeEnum{
+    HEART = "heart",
     LIKE = "like",
+    LAUGH = "laugh",
+    SAD = "sad",
     WOW = "wow",
-    DISLIKE = "dislike",
 }
+
 
 
 export type commentsResponseDataType = {

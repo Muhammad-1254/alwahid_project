@@ -59,7 +59,7 @@ export class CreatePostCommentDto {
   postId: string;
 }
 
-export class createPostLikeDto {
+export class CreatePostLikeDto {
   @IsNotEmpty()
   @IsEnum(PostLikeEnum, { message: `valid like type required!` })
   likeType: PostLikeEnum;
@@ -67,17 +67,23 @@ export class createPostLikeDto {
   postId: string;
 }
 
-export class createUserSavedPostDto {
+export class CreateUserSavedPostDto {
   @IsNotEmpty()
   @IsUUID('4')
   postId: string;
 }
 
-export class createPostCommentLikeDto {
+export class CreatePostCommentLikeDto {
   @IsNotEmpty()
   @IsEnum(PostLikeEnum, { message: `valid like type required!` })
   likeType: PostLikeEnum;
 
+  @IsNotEmpty()
+  @IsUUID("4")
+  commentId: string;
+}
+export class UpdatePostCommentLikeDto extends CreatePostCommentLikeDto {}
+export class DeletePostCommentLikeDto {
   @IsNotEmpty()
   @IsUUID("4")
   commentId: string;

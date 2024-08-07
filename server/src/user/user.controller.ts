@@ -12,6 +12,8 @@ import {
 } from "@nestjs/common";
 import { UserService } from "./user.service";
 import {
+  CreateProfileAvatarDto,
+  CreateProfilePresignedUrlDto,
   createUserLocationDTO,
 } from "./dto/create-user.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
@@ -32,6 +34,15 @@ export class UserController {
   followToAnotherUser(@Request() req, @Query("followTo") followTo: string) {
     return this.userService.followToAnotherUser(req.user.userId, followTo);
   }
+
+  @UseGuards(JwtAccessTokenGuard)
+  @Post("create/profile/presigned-url")
+  createProfilePresignedUrl(@Request() req, createPresignedUrl: CreateProfilePresignedUrlDto) {
+    return this.userService.createProfilePresignedUrl(req.user.userId,createPresignedUrl);
+  }
+  
+  
+
   @Get()
   findAll() {
     return this.userService.findAllUsers();
@@ -82,10 +93,19 @@ export class UserController {
     return this.userService.findOne(id);
   }
 
+  @UseGuards(JwtAccessTokenGuard)
+  @Post("create/profile/avatar")
+  updatedProfileAvatar(@Request() req, createPresignedUrl: CreateProfileAvatarDto) {
+    return this.userService.updatedProfileAvatar(req.user.userId,createPresignedUrl);
+  }
+  
+
   @Patch(":id")
   update(@Param("id") id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.userService.update(+id, updateUserDto);
   }
+
+
 
   @Delete(":id")
   remove(@Param("id") id: string) {
