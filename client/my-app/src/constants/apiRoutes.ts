@@ -31,6 +31,8 @@ export const apiRoutes = {
   getSinglePostData :`${prefix}/unsecure/post`, // unsecure
   getAllPostComments: `${prefix}/post/comments/all`,  //for all users /951b6bb5-b71c-4337-81f7-2679093f2c39?from=0&to=2
 
+  // mix
+  getAllCountryFlagsCode: `${prefix}/mix/get/all/country-code`,
 
 ///////////// PUT ////////////////
 

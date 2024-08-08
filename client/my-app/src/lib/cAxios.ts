@@ -35,13 +35,9 @@ cAxios.interceptors.response.use((response) => {
     // try to refresh the token 
     try {
       const refreshToken = await AsyncStorage.getItem("refreshToken")
-      const accessToken = await AsyncStorage.getItem("accessToken")
-      console.log("refreshToken: ",refreshToken)
-      console.log("accessToken: ",accessToken)
-      console.log("sending request to get new access token")
       const response = await axios.post(apiRoutes.getAccessToken,{refreshToken})
       console.log("response status from get new access token: ",response.status)
-      if(response.status ===200){
+      if(response.status ===200|| response.status ===201){
         const {accessToken,refreshToken} = response.data
 
         // save new tokens

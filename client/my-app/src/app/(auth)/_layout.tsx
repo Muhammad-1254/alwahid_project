@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Redirect, Slot, Stack, usePathname, useRouter } from "expo-router";
 import { AppState } from "react-native";
 import { Colors } from "@/src/constants/Colors";
@@ -10,13 +10,15 @@ export default function _layout() {
   const isAuthenticated = useAppSelector(
     (state) => state.auth.isAuthenticated
   );
-
-  if (isAuthenticated) {
-    return <Redirect href={"(tabs)"} />;
-  }
-
-  const { colorScheme } = useColorScheme();
   const router = useRouter();
+  const { colorScheme } = useColorScheme();
+
+    
+  useEffect(()=>{
+    if(isAuthenticated){
+      router.replace("/(tabs)")
+    }
+  },[isAuthenticated])
 
   return (
     <Stack

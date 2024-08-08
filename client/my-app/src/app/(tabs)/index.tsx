@@ -31,6 +31,7 @@ import {
   TPostUserLikes,
 } from "@/src/store/slices/postData";
 import { useAppSelector } from "@/src/hooks/redux";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 export default function Home() {
   const auth = useAppSelector(state=>state.auth)
   const dispatch = useDispatch();
@@ -40,7 +41,11 @@ export default function Home() {
 
   return (
     <View className="bg-background dark:bg-backgroundDark flex-1 items-center justify-normal gap-y-4 ">
-     
+      <Button  title="show tokens" onPress={async()=>{
+        const refreshToken = await AsyncStorage.getItem("refreshToken")
+        const accessToken = await AsyncStorage.getItem("accessToken")
+        console.log({refreshToken,accessToken})
+      }}/>
       <FlatList
         className="w-full  py-4 "
         data={homePageData}

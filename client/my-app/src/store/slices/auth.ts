@@ -2,7 +2,6 @@ import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import cAxios from "../../lib/cAxios";
 import { UserRoleEnum } from "@/src/types/user";
 import { jwtDecode } from "jwt-decode";
-import { apiRoutesProtected } from "@/src/constants/apiRoutes";
 
 type UserDataProps = {
  user:{

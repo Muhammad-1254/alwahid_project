@@ -1,99 +1,133 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { View, TextInput, Text, Pressable, ScrollView } from "react-native";
 import { Link, useRouter } from "expo-router";
 import axios from "axios";
 import { apiRoutes } from "@/src/constants/apiRoutes";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useDispatch } from "react-redux";
 import Checkbox from "expo-checkbox";
 import { UserRoleEnum } from "@/src/types/user";
 import { AuthLoadingModal } from "./signup";
-import { setIsAuthenticated, setUserRole } from "@/src/store/slices/auth";
+import { setIsAuthenticated } from "@/src/store/slices/auth";
+import { useAppDispatch } from "@/src/hooks/redux";
+import ParsePhoneNumber from "libphonenumber-js";
+import { checkIsValidEmail, checkIsValidPhoneNumber } from "@/src/lib/utils";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useColorScheme } from "nativewind";
+import { Colors } from "@/src/constants/Colors";
 
 type InitialLoginStateProps = {
-  email: string;
+  username: string;
   password: string;
   userRole: UserRoleEnum;
-  errors: { email?: string; password?: string, userRole?: UserRoleEnum};
+  errors: {
+    username?: string;
+    password?: string;
+    userRole?: UserRoleEnum;
+    unknown?: string;
+  };
 };
 export default function Login() {
   const [user, setUser] = useState<InitialLoginStateProps>({
-    email: "usman@gmail.com",
+    username: "usman@gmail.com",
     password: "usman123",
     userRole: UserRoleEnum.NORMAL,
     errors: {},
   });
-
   const [loading, setLoading] = useState(false);
+
+  const [showPassword, setShowPassword] = useState(false);
+
+  const { colorScheme } = useColorScheme();
   const router = useRouter();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
+
+
+
 
   async function handleLogin() {
-    if(!user.email){
-      setUser({...user, errors:{email: "Email is required"}});
-    }
-    if(!user.password || user.password.length < 6){
-      setUser({...user, errors:{password: "Password must be at least 6 characters long"}});
+    setUser((prev) => ({ ...prev, errors: {} }));
+    
+    // checking if email is valid
+    if(!checkIsValidEmail(user.username)){
+      // if email is not valid then check if it is a phone number
+      const phoneNumber = checkIsValidPhoneNumber(user.username);
+      if(!phoneNumber){
+        setUser((prev) => ({
+          ...prev,
+          errors: { username: "Invalid Email or Phone Number" },
+        }));
+        return;
+      }else{
+        setUser((prev) => ({
+          ...prev,
+          username: phoneNumber,
+        }));
+      }
     }
 
-      try {
-        setUser({ ...user, errors: {} });
-        setLoading(true);
-        const res = await axios.post(apiRoutes.login, {
-          username: user.email,
-          password: user.password,
-          role: user.userRole,
-        });
-
-        if (
-          (res.status === 200 || res.status === 201) &&
-          res.data.accessToken &&
-          res.data.accessToken
-        ) {
+    try {
+      setLoading(true);
+      const res = await axios.post(apiRoutes.login, {
+        username: user.username,
+        password: user.password,
+        role: user.userRole,
+      });
+      if (res.status === 401) {
+        setUser((prev) => ({
+          ...prev,
+          errors: { unknown: "Invalid Credentials" },
+        }));
+        throw new Error("Invalid Credentials");
+      }
+      if (res.status === 200 || res.status === 201) {
+        if (res.data.accessToken && res.data.refreshToken) {
           // save token to local storage
           await AsyncStorage.setItem("accessToken", res.data.accessToken);
-          await AsyncStorage.setItem("refreshToken", res.data.accessToken);
-          
+          await AsyncStorage.setItem("refreshToken", res.data.refreshToken);
           // save user data to redux
           dispatch(setIsAuthenticated(true));
-
-          setLoading(false);
-          await new Promise((res) => setTimeout(res, 1000));
-          router.replace("/(tabs)");
+        } else {
+          setUser((prev) => ({
+            ...prev,
+            errors: { unknown: "Something went wrong while login" },
+          }));
+          throw new Error("Something went wrong while login");
         }
-        setLoading(false);
-      } catch (error) {
-        console.log({ error });
-        setLoading(false);
-      }
-    
+      } else console.log("Not handle status while login: ", res.status);
+      setLoading(false);
+      router.replace("/(tabs)");
+    } catch (error) {
+      console.log("error while login", error);
+      setLoading(false);
+    }
   }
 
   return (
-    <ScrollView className="bg-background dark:bg-backgroundDark pt-16">
+    <ScrollView className="bg-background dark:bg-backgroundDark pt-12">
       <AuthLoadingModal loading={loading} />
+
       <View className="w-[95%] gap-y-5 mx-auto">
         <Text
           className="text-primary dark:text-primaryDark 
-         text-2xl font-semibold text-center"
+         text-3xl font-semibold text-center "
         >
           Login to your Account
         </Text>
-        <View className="">
+        <View>
           <Text className="pl-2 pb-0.5 text-primary dark:text-primaryDark">
             Email or Phone
           </Text>
           <TextInput
-            onChangeText={(t) => setUser({ ...user, email: t })}
-            value={user .email}
+            onChangeText={(t) => setUser((prev) => ({ ...prev, username: t }))}
+            value={user.username}
             placeholder="jonDoe@address.com"
             autoCapitalize={"none"}
             keyboardType="email-address"
             className="w-full p-2 text-input dark:text-inputDark bg-secondaryForeground dark:bg-secondaryForegroundDark placeholder:text-muted dark:placeholder:text-mutedDark rounded-inputRadius"
           />
-          {user.errors.email && (
-            <Text className="text-red-500 dark:text-red-400">
-              {user.errors.email}
+          {user.errors.username && (
+            <Text className="text-destructive dark:text-destructiveDark font-normal  mt-2 text-center">
+              {user.errors.username}
             </Text>
           )}
         </View>
@@ -101,61 +135,66 @@ export default function Login() {
           <Text className="pl-2 pb-0.5 text-primary dark:text-primaryDark">
             Password{" "}
           </Text>
-          <TextInput
-            onChangeText={(t) => setUser({ ...user, password: t })}
-            value={user.password}
-            secureTextEntry={true}
-            placeholder="Password"
-            autoCapitalize={"none"}
-            keyboardType="visible-password"
-            className="w-full p-2 text-input dark:text-inputDark bg-secondaryForeground dark:bg-secondaryForegroundDark placeholder:text-muted dark:placeholder:text-mutedDark rounded-inputRadius"
-          />
+          <View className=" w-full  flex-row items-center ">
+            <TextInput
+              onChangeText={(t) => setUser({ ...user, password: t.trim() })}
+              value={user.password}
+              secureTextEntry={showPassword}
+              placeholder="Password"
+              autoCapitalize={"none"}
+              keyboardType="default"
+              className="flex-1 p-2  text-input dark:text-inputDark bg-secondaryForeground dark:bg-secondaryForegroundDark placeholder:text-muted dark:placeholder:text-mutedDark rounded-l-inputRadius "
+            />
+           
+            <MaterialCommunityIcons
+            name={showPassword?"eye-off":"eye"}
+            size={24}
+            color={colorScheme === "dark" ? Colors.dark.input : Colors.light.input}
+            onPress={()=>setShowPassword(prev=>!prev)}
+            style={{
+              width:48,
+              height:"100%",
+              textAlign:"center",
+              textAlignVertical:"center",
+              borderTopRightRadius:12,
+              borderBottomRightRadius:12,
+              backgroundColor:colorScheme === "dark" ? "#fafafa":"#171717" 
+            }}
+            />
+          </View>
           {user.errors.password && (
-            <Text className="text-red-500 dark:text-red-400">
+            <Text className="text-destructive dark:text-destructiveDark font-normal  mt-2 text-center">
               {user.errors.password}
             </Text>
           )}
         </View>
+        <View>
+          <Text className="text-primary dark:text-primaryDark text-center  mb-2">Please select your role. Default Normal</Text>
+
         <View className="flex-row items-center justify-evenly">
-          <View className="flex-row  items-center justify-normal gap-x-2">
-            <Checkbox
-              value={
-                user.userRole === undefined
-                  ? false
-                  : user.userRole === UserRoleEnum.NORMAL
-              }
-              onValueChange={() =>
-                setUser({ ...user, userRole: UserRoleEnum.NORMAL })
-              }
-            />
+
+          <Pressable
+            className="flex-1 flex-row  items-center justify-center gap-x-2  pb-4 pt-1"
+            onPress={() => setUser({ ...user, userRole: UserRoleEnum.NORMAL })}
+          >
+            <Checkbox value={user.userRole === UserRoleEnum.NORMAL} />
             <Text className="text-primary dark:text-primaryDark">Normal</Text>
-          </View>
-          <View className="flex-row  items-center justify-normal gap-x-2">
-            <Checkbox
-              value={
-                user.userRole === undefined
-                  ? false
-                  : user.userRole === UserRoleEnum.CREATOR
-              }
-              onValueChange={() =>
-                setUser({ ...user, userRole: UserRoleEnum.CREATOR })
-              }
-            />
+          </Pressable>
+          <Pressable
+            className="flex-1 flex-row  items-center justify-center gap-x-2  pb-4 pt-1"
+            onPress={() => setUser({ ...user, userRole: UserRoleEnum.CREATOR })}
+          >
+            <Checkbox value={user.userRole === UserRoleEnum.CREATOR} />
             <Text className="text-primary dark:text-primaryDark">Creator</Text>
-          </View>
-          <View className="flex-row  items-center justify-normal gap-x-2">
-            <Checkbox
-              value={
-                user.userRole === undefined
-                  ? false
-                  : user.userRole === UserRoleEnum.ADMIN
-              }
-              onValueChange={() =>
-                setUser({ ...user, userRole: UserRoleEnum.ADMIN })
-              }
-            />
+          </Pressable>
+          <Pressable
+            className="flex-1 flex-row  items-center justify-center gap-x-2  pb-4 pt-1"
+            onPress={() => setUser({ ...user, userRole: UserRoleEnum.ADMIN })}
+          >
+            <Checkbox value={user.userRole === UserRoleEnum.ADMIN} />
             <Text className="text-primary dark:text-primaryDark">Admin</Text>
-          </View>
+          </Pressable>
+        </View>
         </View>
 
         <Pressable

@@ -33,10 +33,10 @@ const Modal: FC<ModalProps> = ({
       visible={visible}
       transparent={transparent}
       onRequestClose={() => setVisible && setVisible(false)}
-      statusBarTranslucent={showStatusBar}
+      statusBarTranslucent={!showStatusBar}
       animationType={animationType || "slide"}
     >
-      <View className="relative w-full h-full items-center justify-center border border-gray-600">
+      <View className="relative w-full h-full items-center justify-center ">
         <Pressable
           onPress={() => setVisible && setVisible(false)}
           style={{ opacity: bgOpacity ?? 0.5 }}

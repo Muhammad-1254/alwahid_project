@@ -5,6 +5,7 @@ import { Image, ImageSourcePropType } from "react-native";
 import { twMerge } from "tailwind-merge";
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { PostLikeEnum } from "../types/post";
+import ParsePhoneNumber from "libphonenumber-js";
 
 
 export function cn(...inputs: ClassValue[]) {
@@ -88,3 +89,22 @@ export const getPostLikeIcon = (likeType: PostLikeEnum) => {
 return icon;
 
 }
+
+export const checkIsValidEmail =(email: string) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+
+export const checkIsValidPhoneNumber = (phoneNumber: string) => {
+    
+  const parsePhoneNumber = ParsePhoneNumber(phoneNumber.startsWith("+")?phoneNumber:"+"+phoneNumber);
+  if(!parsePhoneNumber?.isValid()){
+  console.log("isValid", parsePhoneNumber?.isValid());
+    return false;
+  }
+  const formatPhoneNumber = parsePhoneNumber?.formatInternational();
+  const pnList   = formatPhoneNumber?.split(" ")
+  const requiredPN = pnList[0]+"-"+pnList[1]+pnList[2];
+  return requiredPN;
+};
