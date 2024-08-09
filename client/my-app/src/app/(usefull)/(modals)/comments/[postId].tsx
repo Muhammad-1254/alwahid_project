@@ -89,7 +89,7 @@ const CommentModal: FC<CommentModalProps> = () => {
         setIsLoadComplete(true);
         return;
       }
-      res.data.forEach((element) => {
+      res.data.forEach((element:any) => {
         console.log("fetch data name: ", element.content);
       });
       if (comments.current.length === 0) {

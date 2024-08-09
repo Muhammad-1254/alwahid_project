@@ -14,6 +14,7 @@ import { checkIsValidEmail, checkIsValidPhoneNumber } from "@/src/lib/utils";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useColorScheme } from "nativewind";
 import { Colors } from "@/src/constants/Colors";
+import ErrorHandler from "@/src/lib/ErrorHandler";
 
 type InitialLoginStateProps = {
   username: string;
@@ -98,9 +99,19 @@ export default function Login() {
       router.replace("/(tabs)");
     } catch (error) {
       console.log("error while login", error);
+      if(axios.isAxiosError(error)){
+        if(error.response?.status === 401){
+          ErrorHandler.handle(error,{alertTitle:"Invalid Credentials",customMessage:`${checkIsValidEmail(user.username)?"Email":"Phone Number"} or Password is incorrect`});
+        }else{
+          ErrorHandler.handle(error);
+        }
+      }else{
+        ErrorHandler.handle(error);
+      }
+    }finally{
       setLoading(false);
-    }
   }
+}
 
   return (
     <ScrollView className="bg-background dark:bg-backgroundDark pt-12">

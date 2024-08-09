@@ -8,7 +8,14 @@ import {
   ActivityIndicator,
 } from "react-native";
 
-import React, { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  FC,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useColorScheme } from "nativewind";
 import { useAppDispatch, useAppSelector } from "@/src/hooks/redux";
 import { setUser, setUserRole } from "@/src/store/slices/auth";
@@ -21,49 +28,70 @@ import RNRAnimated, {
   useAnimatedStyle,
   withTiming,
 } from "react-native-reanimated";
-import {
-  fetchProfileTabLikedPosts,
-  fetchProfileTabPosts,
-  fetchProfileTabSavedPosts,
-  ProfileTabEnum,
-  ProfileTabLikedPostsProps,
-  ProfileTabPostsProps,
-  ProfileTabSavedPostsProps,
-  setProfileTabIndex,
-  setProfileTabInitialData,
-} from "@/src/store/slices/profileTabs";
+
 import cAxios from "@/src/lib/cAxios";
 import { apiRoutes } from "@/src/constants/apiRoutes";
 import { UserRoleEnum } from "@/src/types/user";
-import { ColorSchemeName } from "react-native";
 import _, { set } from "lodash";
-import ContentLoader, { Facebook, Rect } from "react-content-loader/native";
+import ContentLoader, { Rect } from "react-content-loader/native";
 import { RefreshControl } from "react-native-gesture-handler";
+import { PaginationType } from "@/src/types/post";
+import ErrorHandler from "@/src/lib/ErrorHandler";
+
+type PostMediasProps = {
+  id: string;
+  mimeType: string;
+  url: string;
+};
+type PostDataType = {
+  id: string;
+  createdAt: string;
+  postMedias: PostMediasProps[];
+};
+
+
+enum ProfileTabEnum {
+  SAVED_POSTS = 0,
+  LIKED_POSTS = 1,
+  POSTS = 2,
+}
+
+const pageInitialState: PaginationType = {
+  skip: 0,
+  take: 10,
+};
+const postControlInitial = {
+  post: {
+    page: pageInitialState,
+    isComplete: false,
+  },
+  savedPost: {
+    page: pageInitialState,
+    isComplete: false,
+  },
+  likePost: {
+    page: pageInitialState,
+    isComplete: false,
+  },
+};
+
 export default function Profile() {
   const IMG_HEIGHT = useMemo(() => 240, []);
   const scrollY = useRef(new Animated.Value(0));
 
-  const {
-    tabIndex,
-    loading,
-    likedPosts,
-    posts,
-    savedPosts,
-    error,
-    isLikedPostComplete,
-    isPostComplete,
-    isSavedPostComplete,
-    postsCount,
-    likedPostsCount,
-    savedPostsCount,
-  } = useAppSelector((state) => state.profileTab);
+  const [posts, setPosts] = useState<PostDataType[]>([]);
+  const [savedPosts, setSavedPosts] = useState<PostDataType[]>([]);
+  const [likedPosts, setLikedPosts] = useState<PostDataType[]>([]);
 
-  const dispatch = useAppDispatch();
-  const [showSkeleton, setShowSkeleton] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [tabIndex, setTabIndex] = useState(ProfileTabEnum.LIKED_POSTS);
   const [refreshing, setRefreshing] = useState(false);
-  const { colorScheme } = useColorScheme();
-  const router = useRouter();
 
+const [postControl, setPostControl] = useState(postControlInitial)
+
+  const { colorScheme } = useColorScheme();
+  const dispatch = useAppDispatch();
+  const router = useRouter();
 
   // get user profile data
   useEffect(() => {
@@ -87,45 +115,108 @@ export default function Profile() {
     getProfileData();
   }, []);
 
-  const canFetchMore = _.debounce(async () => {
-    // the page state will handle all three posts type
-    // checking current type of post and depending on len making page {from, to}
-    // if some post is completely fetch then set load complete true and do nothing
-    if (error.length > 1) {
-      console.log("error from canFetchMore: ", error);
-      return;
-    }
-    if (loading) return;
+  const getPersonalPostData = async () => {
+    try {
+      setLoading(true);
+      const res = await cAxios.get(
+        `${apiRoutes.getUserProfileTabPosts}?skip=${postControl.post.page.skip}&take=${postControl.post.page.take}`
+      );
+      if (res.data.length === 0) {
+        setPostControl((prev)=>({...prev,post:{...prev.post,isComplete:true}}))
+      } else {
+        setPosts((prev) => [...prev, ...res.data]);
+        setPostControl((prev)=>({...prev,post:{...prev.post,page:{...prev.post.page,skip:prev.post.page.skip+prev.post.page.take}}}))
 
-    if (tabIndex === ProfileTabEnum.POSTS) {
-      if (isPostComplete) return;
-      const postLen = posts.length ? posts.length : 0;
-      const page = { from: postLen, to: postLen + 8 };
-      await dispatch(fetchProfileTabPosts(page));
-    } else if (tabIndex === ProfileTabEnum.SAVED_POSTS) {
-      if (isSavedPostComplete) return;
-      const savedPostLen = savedPosts.length ? savedPosts.length : 0;
-      const page = {
-        from: savedPostLen,
-        to: savedPostLen + 8,
-      };
-      await dispatch(fetchProfileTabSavedPosts(page));
-    } else if (tabIndex === ProfileTabEnum.LIKED_POSTS) {
-      if (isLikedPostComplete) return;
-      const likedPostLen = likedPosts.length ? likedPosts.length : 0;
-      const page = {
-        from: likedPostLen,
-        to: likedPostLen + 8,
-      };
-      await dispatch(fetchProfileTabLikedPosts(page));
+      }
+      setLoading(false);
+    } catch (error) {
+      console.log("error from fetching user profile tab posts", error);
+      ErrorHandler.handle(error);
+    } finally {
+    
+      setLoading(false);
     }
-  }, 1200);
+  };
+  const getPersonalLikedPostData = async () => {
+    try {
+      setLoading(true);
+      const res = await cAxios.get(
+        `${apiRoutes.getUserProfileTabLikedPosts}?skip=${postControl.likePost.page.skip}&take=${postControl.likePost.page.take}`
+      );
+      if (res.data.length === 0) {
+        setPostControl((prev)=>({...prev,likePost:{...prev.likePost,isComplete:true}}))
+      } else {
+        setLikedPosts((prev) => [...prev, ...res.data]);
+        setPostControl((prev)=>({...prev,likePost:{...prev.likePost,page:{...prev.likePost.page,skip:prev.likePost.page.skip+prev.likePost.page.take}}}))
 
-  const onEndReachedHandler = async () => {
-    console.log("onEndReachedHandler called");
-    await canFetchMore();
+      }
+      setLoading(false);
+    } catch (error) {
+      console.log("error from fetching user profile tab like posts", error);
+      ErrorHandler.handle(error);
+    } finally {
+    
+      setLoading(false);
+    }
+  };
+  const getPersonalSavedPostData = async () => {
+    try {
+      setLoading(true);
+      const res = await cAxios.get(
+        `${apiRoutes.getUserProfileTabSavedPosts}?skip=${postControl.savedPost.page.skip}&take=${postControl.savedPost.page.take}`
+      );
+      if (res.data.length === 0) {
+        setPostControl((prev)=>({...prev,savedPost:{...prev.savedPost,isComplete:true}}))
+      } else {
+        setSavedPosts((prev) => [...prev, ...res.data]);
+        setPostControl((prev)=>({...prev,savedPost:{...prev.savedPost,page:{...prev.savedPost.page,skip:prev.savedPost.page.skip+prev.savedPost.page.take}}}))
+
+      }
+      setLoading(false);
+    } catch (error) {
+      console.log("error from fetching user profile tab saved posts", error);
+      ErrorHandler.handle(error);
+    } finally {
+    
+      setLoading(false);
+    }
   };
 
+  const canFetchMore = async () => {
+    if (tabIndex === ProfileTabEnum.POSTS) {
+      if (postControl.post.isComplete) return;
+      await getPersonalPostData()
+    }else  if (tabIndex === ProfileTabEnum.LIKED_POSTS) {
+      if (postControl.likePost.isComplete) return;
+      await getPersonalLikedPostData()
+    }else  if (tabIndex === ProfileTabEnum.SAVED_POSTS) {
+      if (postControl.savedPost.isComplete) return;
+      await getPersonalSavedPostData()
+    }
+  }
+
+  const onEndReachedHandler = _.debounce(async () => {
+   
+    console.log("onEndReachedHandler called");
+    if(loading) return
+    await canFetchMore();
+  },500)
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    // checking current active tab then reload it
+    if (tabIndex === ProfileTabEnum.POSTS) {
+    setPostControl((prev)=>({...prev,post:{...prev.post,page:pageInitialState,isComplete:false}}))
+      setPosts([]);
+    }  else if (tabIndex === ProfileTabEnum.LIKED_POSTS) {
+      setPostControl((prev)=>({...prev,likePost:{...prev.likePost,page:pageInitialState,isComplete:false}}))
+      setLikedPosts([]);
+    }else if (tabIndex === ProfileTabEnum.SAVED_POSTS) {
+      setPostControl((prev)=>({...prev,savedPost:{...prev.savedPost,page:pageInitialState,isComplete:false}}))
+       setSavedPosts([]);
+     }
+    setRefreshing(false);
+  }, []);
   const imageAnimatedStyle = {
     transform: [
       {
@@ -153,9 +244,6 @@ export default function Profile() {
     }),
   };
 
-  const handleRefresh = useCallback(async ()=>{
-    dispatch(setProfileTabInitialData())
-  },[])
   return (
     <>
       <Stack.Screen
@@ -191,9 +279,9 @@ export default function Profile() {
         data={
           tabIndex === ProfileTabEnum.POSTS
             ? posts
-            : tabIndex === ProfileTabEnum.SAVED_POSTS
-            ? savedPosts
-            : likedPosts
+            : tabIndex === ProfileTabEnum.LIKED_POSTS
+            ? likedPosts
+            : savedPosts
         }
         ListHeaderComponent={() => (
           <View className="">
@@ -206,7 +294,7 @@ export default function Profile() {
               }}
             />
             <UserProfileInfo />
-            <Tabs />
+            <Tabs tabIndex={tabIndex} setTabIndex={setTabIndex} />
           </View>
         )}
         onScroll={Animated.event(
@@ -215,6 +303,7 @@ export default function Profile() {
         )}
         onEndReached={onEndReachedHandler}
         onEndReachedThreshold={0.5}
+        // TODO: remove random here
         keyExtractor={(item) => `${item}-${Math.random()}`}
         style={{
           backgroundColor:
@@ -224,10 +313,7 @@ export default function Profile() {
         }}
         numColumns={3}
         refreshControl={
-          <RefreshControl
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
         renderItem={({ item }) => (
           <FlatListRenderItem
@@ -235,37 +321,24 @@ export default function Profile() {
             type={
               tabIndex === ProfileTabEnum.POSTS
                 ? ProfileTabEnum.POSTS
-                : tabIndex === ProfileTabEnum.SAVED_POSTS
-                ? ProfileTabEnum.SAVED_POSTS
-                : ProfileTabEnum.LIKED_POSTS
+                : tabIndex === ProfileTabEnum.LIKED_POSTS
+                ? ProfileTabEnum.LIKED_POSTS
+                : ProfileTabEnum.SAVED_POSTS
             }
-           
           />
         )}
-        ListEmptyComponent={<TabDataSkeleton tabIndex={tabIndex}/>}
-        ListFooterComponent={() => (
-          <ListFooterComponent
-            loading={loading}
-            showSkeleton={showSkeleton}
-            colorScheme={colorScheme}
-          />
-        )}
+        ListEmptyComponent={<TabDataSkeleton tabIndex={tabIndex} />}
+        ListFooterComponent={() => <ListFooterComponent loading={loading} />}
       />
     </>
   );
 }
 
 type FlatListRenderItemProps = {
-  item:
-    | ProfileTabPostsProps
-    | ProfileTabSavedPostsProps
-    | ProfileTabLikedPostsProps;
+  item: PostDataType;
   type: ProfileTabEnum;
 };
-const FlatListRenderItem: FC<FlatListRenderItemProps> = ({
-  item,
-  type,
-}) => {
+const FlatListRenderItem: FC<FlatListRenderItemProps> = ({ item, type }) => {
   const router = useRouter();
   const { width } = useWindowDimensions();
 
@@ -275,21 +348,14 @@ const FlatListRenderItem: FC<FlatListRenderItemProps> = ({
         style={{ width: width / 3 }}
         className="aspect-[1/2] border border-border dark:border-borderDark rounded-md "
         key={item.id}
-        onPress={() => router.push(`/postDetails/${item.id}`)}
+        onPress={() => router.push(`/(usefull)/postDetails/${item.id}`)}
       >
-        {item.postMedias && item.postMedias.length > 0 && (
-          <Image
-            source={{
-              uri: item.postMedias[0].url,
-            }}
-            className="w-full h-full object-cover bg-center"
-          />
-        )}
-        {!item.postMedias && item.textContent && (
-          <Text className="text-primary dark:text-primaryDark ">
-            {item.textContent.slice(0, 30)}
-          </Text>
-        )}
+        <Image
+          source={{
+            uri: item.postMedias[0].url,
+          }}
+          className="w-full h-full object-cover bg-center"
+        />
       </TouchableOpacity>
     );
   } else if (type === ProfileTabEnum.LIKED_POSTS) {
@@ -298,21 +364,14 @@ const FlatListRenderItem: FC<FlatListRenderItemProps> = ({
         style={{ width: width / 3 }}
         className="aspect-[3/4] border border-border dark:border-borderDark rounded-md "
         key={item.id}
-        onPress={() => router.push(`/postDetails/${item.id}`)}
+        onPress={() => router.push(`/(usefull)/postDetails/${item.id}`)}
       >
-        {item.postMedias && item.postMedias.length > 0 && (
-          <Image
-            source={{
-              uri: item.postMedias[0].url,
-            }}
-            className="w-full h-full object-cover bg-center"
-          />
-        )}
-        {!item.postMedias && item.textContent && (
-          <Text className="text-primary dark:text-primaryDark ">
-            {item.textContent.slice(0, 30)}
-          </Text>
-        )}
+        <Image
+          source={{
+            uri: item.postMedias[0].url,
+          }}
+          className="w-full h-full object-cover bg-center"
+        />
       </TouchableOpacity>
     );
   } else {
@@ -321,21 +380,14 @@ const FlatListRenderItem: FC<FlatListRenderItemProps> = ({
         style={{ width: width / 3 }}
         className="aspect-[3/4] border border-border dark:border-borderDark rounded-md "
         key={item.id}
-        onPress={() => router.push(`/postDetails/${item.id}`)}
+        onPress={() => router.push(`/(usefull)/postDetails/${item.id}`)}
       >
-        {item.postMedias && item.postMedias.length > 0 && (
-          <Image
-            source={{
-              uri: item.postMedias[0].url,
-            }}
-            className="w-full h-full object-cover bg-center"
-          />
-        )}
-        {!item.postMedias && item.textContent && (
-          <Text className="text-primary dark:text-primaryDark ">
-            {item.textContent.slice(0, 30)}
-          </Text>
-        )}
+        <Image
+          source={{
+            uri: item.postMedias[0].url,
+          }}
+          className="w-full h-full object-cover bg-center"
+        />
       </TouchableOpacity>
     );
   }
@@ -343,15 +395,10 @@ const FlatListRenderItem: FC<FlatListRenderItemProps> = ({
 
 type ListFooterComponentProps = {
   loading: boolean;
-  colorScheme: ColorSchemeName;
-  showSkeleton: boolean;
 };
-const ListFooterComponent: FC<ListFooterComponentProps> = ({
-  loading,
-  showSkeleton,
-  colorScheme,
-}) => {
-  if (!showSkeleton && loading) {
+const ListFooterComponent: FC<ListFooterComponentProps> = ({ loading }) => {
+  const { colorScheme } = useColorScheme();
+  if (loading) {
     return (
       <View className=" items-center justify-center h-20 ">
         <ActivityIndicator
@@ -409,12 +456,15 @@ const UserProfileInfo = () => {
   );
 };
 
-const Tabs = () => {
+type TabsProps = {
+  tabIndex: ProfileTabEnum;
+setTabIndex: React.Dispatch<React.SetStateAction<ProfileTabEnum>>;
+}
+const Tabs:FC<TabsProps> = ({setTabIndex,tabIndex}) => {
   const { colorScheme } = useColorScheme();
   const { width } = useWindowDimensions();
   const dispatch = useAppDispatch();
-  const index = useAppSelector((state) => state.profileTab.tabIndex);
-  const userRole = useAppSelector((state) => state.auth.userRole);
+  const userRole = useAppSelector(s=>s.auth.userRole);
 
   const AnimatedViewStyle = useAnimatedStyle(() => {
     return {
@@ -423,7 +473,7 @@ const Tabs = () => {
           translateX:
             userRole === UserRoleEnum.NORMAL
               ? withTiming(
-                  index === ProfileTabEnum.LIKED_POSTS
+                tabIndex === ProfileTabEnum.LIKED_POSTS
                     ? 0
                     : width / 2 + (width / 100) * 2,
                   {
@@ -431,9 +481,9 @@ const Tabs = () => {
                   }
                 )
               : withTiming(
-                  index === ProfileTabEnum.POSTS
+                tabIndex === ProfileTabEnum.POSTS
                     ? 0
-                    : index === ProfileTabEnum.LIKED_POSTS
+                    : tabIndex === ProfileTabEnum.LIKED_POSTS
                     ? width / 3
                     : (width / 3) * 2,
                   { duration: 150 }
@@ -458,10 +508,10 @@ const Tabs = () => {
         } h-full `}
       >
         <Ionicons
-          name={index === 0 ? "bookmark" : "bookmark-outline"}
+          name={tabIndex === 0 ? "bookmark" : "bookmark-outline"}
           size={36}
           onPress={() =>
-            dispatch(setProfileTabIndex(ProfileTabEnum.SAVED_POSTS))
+            setTabIndex(ProfileTabEnum.SAVED_POSTS)
           }
           color={
             colorScheme === "dark" ? Colors.dark.primary : Colors.light.primary
@@ -481,10 +531,10 @@ const Tabs = () => {
         } h-full `}
       >
         <Ionicons
-          name={index === 1 ? "heart" : "heart-outline"}
+          name={tabIndex === 1 ? "heart" : "heart-outline"}
           size={36}
           onPress={() =>
-            dispatch(setProfileTabIndex(ProfileTabEnum.LIKED_POSTS))
+            setTabIndex(ProfileTabEnum.LIKED_POSTS)
           }
           color={
             colorScheme === "dark" ? Colors.dark.primary : Colors.light.primary
@@ -501,9 +551,9 @@ const Tabs = () => {
         userRole === UserRoleEnum.CREATOR) && (
         <View className="w-[32%] h-full">
           <Ionicons
-            name={index === 2 ? "grid" : "grid-outline"}
+            name={tabIndex === 2 ? "grid" : "grid-outline"}
             size={32}
-            onPress={() => dispatch(setProfileTabIndex(ProfileTabEnum.POSTS))}
+            onPress={() => setTabIndex(ProfileTabEnum.POSTS)}
             color={
               colorScheme === "dark"
                 ? Colors.dark.primary
@@ -522,37 +572,42 @@ const Tabs = () => {
   );
 };
 
+const TabDataSkeleton = ({ tabIndex }: { tabIndex: ProfileTabEnum }) => {
+  const { colorScheme } = useColorScheme();
+  const { width } = useWindowDimensions();
 
-
-const TabDataSkeleton = ({tabIndex}:{tabIndex:ProfileTabEnum}) => {
-const {colorScheme}  = useColorScheme()
-const {width} = useWindowDimensions()
-
-const Content = ({height,width}:{width:number, height:number})=>(
-  <ContentLoader
-  style={{ width , height }}
-  viewBox={`0 0 ${width} ${height}`}
-  animate={true}
-  backgroundColor={colorScheme==='dark'?Colors.dark.muted:Colors.light.border}
-  foregroundColor={colorScheme==='dark'?Colors.dark.primaryForeground:Colors.light.muted}
-
->
-  <Rect x="0" y="0" rx="4" ry="4" width={width} height={height} />
-</ContentLoader>
-)
-return <View className="flex-row flex-wrap items-center justify-between">
-{
-Array.from({length:4},()=>Math.random()).map((_)=>{
-  if(tabIndex===ProfileTabEnum.POSTS){
-    return  <Content key={_} height={(width/3)*(2)} width={width/3} />
-    
-  }else if(tabIndex === ProfileTabEnum.LIKED_POSTS){
-   return <Content key={_} height={(width/3)*(4/3)} width={width/3} />
-  }else{
-   return <Content key={_} height={(width/3)*(4/3)} width={width/3} />
-  }
-})
-}
-</View> 
-
+  const Content = ({ height, width }: { width: number; height: number }) => (
+    <ContentLoader
+      style={{ width, height }}
+      viewBox={`0 0 ${width} ${height}`}
+      animate={true}
+      backgroundColor={
+        colorScheme === "dark" ? Colors.dark.muted : Colors.light.border
+      }
+      foregroundColor={
+        colorScheme === "dark"
+          ? Colors.dark.primaryForeground
+          : Colors.light.muted
+      }
+    >
+      <Rect x="0" y="0" rx="4" ry="4" width={width} height={height} />
+    </ContentLoader>
+  );
+  return (
+    <View className="flex-row flex-wrap items-center justify-between">
+      {Array.from({ length: 4 }, () => Math.random()).map((_) => {
+        if (tabIndex === ProfileTabEnum.POSTS) {
+          return <Content key={_} height={(width / 3) * 2} width={width / 3} />;
+        } else if (tabIndex === ProfileTabEnum.LIKED_POSTS) {
+          return (
+            <Content key={_} height={(width / 3) * (4 / 3)} width={width / 3} />
+          );
+        } else {
+          return (
+            <Content key={_} height={(width / 3) * (4 / 3)} width={width / 3} />
+          );
+        }
+      })}
+    </View>
+  );
 };

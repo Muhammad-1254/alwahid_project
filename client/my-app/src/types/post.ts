@@ -10,6 +10,11 @@ export enum PostLikeEnum{
 }
 
 
+export type PaginationType ={
+    skip: number;
+    take: number;
+}
+
 
 export const dummyCommentLikes = [
     { createdAt: '2023-01-01T00:00:00Z', id: '1', likeType: PostLikeEnum.HEART },

@@ -71,6 +71,7 @@ export default function PostDetailsScreen() {
   const router = useRouter();
   const { colorScheme } = useColorScheme();
   const userId = useAppSelector((s) => s.auth.data.user.userId);
+  console.log("isCurrentUserLiked: ",data?.isCurrentUserLiked)
   useEffect(() => {
     async function getPost() {
       let api: string;
@@ -105,7 +106,7 @@ export default function PostDetailsScreen() {
           headerLeft: () => (
             <Ionicons
               name="arrow-back"
-              style={{ paddingRight: 20 }}
+              style={{ paddingLeft: 20 }}
               onPress={() => {
                 router.back();
               }}
@@ -478,10 +479,18 @@ const PublicInteractions: FC<PublicInteractionsProps> = ({ data }) => {
   } = data;
   const { colorScheme } = useColorScheme();
   const [isSave, setIsSaved] = useState(false);
-  const [isLiked, setIsLiked] = useState(isCurrentUserLiked !== null);
+  const [isLiked, setIsLiked] = useState(false);
   const [loading,setLoading] = useState(false)
   const [shareModalVisible, setShareModalVisible] = useState(false);
 
+  useEffect(() => {
+    console.log({ isCurrentUserLiked });
+    if (isCurrentUserLiked) {
+      setIsLiked(true);
+    } else {
+      setIsLiked(false);
+    }
+  }, [isCurrentUserLiked]);
   const router = useRouter ()
 
   const lastLikeUsername =

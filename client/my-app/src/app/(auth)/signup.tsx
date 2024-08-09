@@ -25,6 +25,7 @@ import { GenderEnum } from "@/src/types/user";
 import { FlashList } from "@shopify/flash-list";
 import { checkIsValidEmail, checkIsValidPhoneNumber } from "@/src/lib/utils";
 import { AuthProviderEnum } from "@/src/types/auth";
+import ErrorHandler from "@/src/lib/ErrorHandler";
 
 const selectedCountryInitialState = {
   id: 173,
@@ -56,13 +57,13 @@ type initialSignUpState = {
   };
 };
 const userInitialState: initialSignUpState = {
-  email: "",
-  password: "",
-  confirmPassword: "",
-  firstname: "",
-  lastname: "",
-  phoneNumber: "",
-  gender: GenderEnum.MALE,
+  email: "amna@gmail.com",
+  password: "usman123",
+  confirmPassword: "usman123",
+  firstname: "amna",
+  lastname: "jabbar",
+  phoneNumber: "3131158807",
+  gender: GenderEnum.FEMALE,
   error: {},
 };
 export default function SignUp() {
@@ -82,7 +83,7 @@ export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
 
   const { colorScheme } = useColorScheme();
-  const router=useRouter();
+  const router = useRouter();
   async function signUpWithEmail() {
     setUser((prev) => ({ ...prev, error: {} }));
     if (user.firstname.length < 2) {
@@ -164,18 +165,25 @@ export default function SignUp() {
         authProvider: AuthProviderEnum.LOCAL,
       });
       if (res.status === 201 || res.status === 200) {
-        Alert.alert(
-          "Please check your inbox for email verification!.\nThen login again"
-        );
         setUser(userInitialState);
         setDate(null);
         setSelectedCountry(selectedCountryInitialState);
+        router.canGoBack() && router.back();
       }
     } catch (error) {
       console.log("error while signup", error);
-      Alert.alert("Something went wrong, Please try again later!");
-      router.canGoBack() && router.back();
-      
+      if (axios.isAxiosError(error)) {
+        console.log("axios error true");
+        if (error.response?.status === 409){
+          ErrorHandler.handle(error, {
+            alertTitle: "Error",
+            customMessage: "Email or Phone number is already in use",
+          });
+        }else {
+          ErrorHandler.handle(error);
+        }
+      } else
+       ErrorHandler.handle(error);
     } finally {
       setLoading(false);
     }
@@ -350,21 +358,23 @@ export default function SignUp() {
               keyboardType="default"
               className="flex-1 p-2  text-input dark:text-inputDark bg-secondaryForeground dark:bg-secondaryForegroundDark placeholder:text-muted dark:placeholder:text-mutedDark rounded-l-inputRadius "
             />
-           
+
             <MaterialCommunityIcons
-            name={showPassword?"eye-off":"eye"}
-            size={24}
-            color={colorScheme === "dark" ? Colors.dark.input : Colors.light.input}
-            onPress={()=>setShowPassword(prev=>!prev)}
-            style={{
-              width:48,
-              height:"100%",
-              textAlign:"center",
-              textAlignVertical:"center",
-              borderTopRightRadius:12,
-              borderBottomRightRadius:12,
-              backgroundColor:colorScheme === "dark" ? "#fafafa":"#171717" 
-            }}
+              name={showPassword ? "eye-off" : "eye"}
+              size={24}
+              color={
+                colorScheme === "dark" ? Colors.dark.input : Colors.light.input
+              }
+              onPress={() => setShowPassword((prev) => !prev)}
+              style={{
+                width: 48,
+                height: "100%",
+                textAlign: "center",
+                textAlignVertical: "center",
+                borderTopRightRadius: 12,
+                borderBottomRightRadius: 12,
+                backgroundColor: colorScheme === "dark" ? "#fafafa" : "#171717",
+              }}
             />
           </View>
           {user.error.password && (
@@ -377,10 +387,12 @@ export default function SignUp() {
           <Text className="pl-2 pb-0.5 text-primary dark:text-primaryDark">
             Confirm Password{" "}
           </Text>
-         
+
           <View className=" w-full  flex-row items-center ">
             <TextInput
-              onChangeText={(t) => setUser({ ...user, confirmPassword: t.trim() })}
+              onChangeText={(t) =>
+                setUser({ ...user, confirmPassword: t.trim() })
+              }
               value={user.confirmPassword}
               secureTextEntry={showPassword}
               placeholder="Confirm Password"
@@ -388,21 +400,23 @@ export default function SignUp() {
               keyboardType="default"
               className="flex-1 p-2  text-input dark:text-inputDark bg-secondaryForeground dark:bg-secondaryForegroundDark placeholder:text-muted dark:placeholder:text-mutedDark rounded-l-inputRadius "
             />
-           
+
             <MaterialCommunityIcons
-            name={showPassword?"eye-off":"eye"}
-            size={24}
-            color={colorScheme === "dark" ? Colors.dark.input : Colors.light.input}
-            onPress={()=>setShowPassword(prev=>!prev)}
-            style={{
-              width:48,
-              height:"100%",
-              textAlign:"center",
-              textAlignVertical:"center",
-              borderTopRightRadius:12,
-              borderBottomRightRadius:12,
-              backgroundColor:colorScheme === "dark" ? "#fafafa":"#171717" 
-            }}
+              name={showPassword ? "eye-off" : "eye"}
+              size={24}
+              color={
+                colorScheme === "dark" ? Colors.dark.input : Colors.light.input
+              }
+              onPress={() => setShowPassword((prev) => !prev)}
+              style={{
+                width: 48,
+                height: "100%",
+                textAlign: "center",
+                textAlignVertical: "center",
+                borderTopRightRadius: 12,
+                borderBottomRightRadius: 12,
+                backgroundColor: colorScheme === "dark" ? "#fafafa" : "#171717",
+              }}
             />
           </View>
           {user.error.confirmPassword && (

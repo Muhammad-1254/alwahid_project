@@ -1,14 +1,11 @@
 import { useFonts } from "expo-font";
 import {
-  Redirect,
   Stack,
-  useNavigation,
-  usePathname,
   useRouter,
 } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import { Provider as StoreProvider, useDispatch } from "react-redux";
+import { Provider as StoreProvider, } from "react-redux";
 import { store, persistor } from "@/src/store/store";
 import AuthProvider from "../provider/auth";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,12 +16,13 @@ import { PersistGate } from "redux-persist/integration/react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import Toast from "react-native-toast-message";
-import * as Network from "expo-network";
 import { JsStack } from "../components/elements/CustomJsStack";
 import { TransitionPresets } from "@react-navigation/stack";
+import { globalErrorHandler } from "@/src/lib/ErrorHandler";
+
+
 
 SplashScreen.preventAutoHideAsync();
-
 export default function RootLayout() {
   const { colorScheme } = useColorScheme();
   const router = useRouter();
@@ -34,11 +32,16 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
+    ErrorUtils.setGlobalHandler(globalErrorHandler);
+  }, []);
+  useEffect(() => {
     console.log("app loading......");
     if (loaded) {
       SplashScreen.hideAsync();
     }
   }, [loaded]);
+ 
+
   if (!loaded) {
     return null;
   }

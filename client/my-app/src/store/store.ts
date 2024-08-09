@@ -7,14 +7,12 @@ import NewPostReducer from "./slices/addPost";
 import chatScreenReducer from "./slices/chatScreenData";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { persistStore, persistReducer } from "redux-persist";
-import ProfileTabReducer  from "./slices/profileTabs";
 
 const rootReducer = combineReducers({
   mix: mixReducer,
   auth: authReducer,
   postDetail: postDataReducer,
   newPost: NewPostReducer,
-  profileTab: ProfileTabReducer,
   chatScreen: chatScreenReducer,
 });
 
