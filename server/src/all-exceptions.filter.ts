@@ -7,6 +7,10 @@ import {
 import { BaseExceptionFilter } from "@nestjs/core";
 import { MyLoggerService } from "./my-logger/my-logger.service";
 import { Request, Response } from "express";
+import { QueryFailedError } from "typeorm";
+
+
+
 type MyResponseObject = {
   statusCode: number;
   timestamp: string;
@@ -17,6 +21,7 @@ type MyResponseObject = {
 @Catch()
 export class AllExceptionFilter extends BaseExceptionFilter {
   private readonly logger = new MyLoggerService(AllExceptionFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -31,7 +36,16 @@ export class AllExceptionFilter extends BaseExceptionFilter {
     if (exception instanceof HttpException) {
       myResponseObject.statusCode = exception.getStatus();
       myResponseObject.response = exception.getResponse();
-    } else if (exception instanceof Error) {
+
+    }else if(exception instanceof QueryFailedError){
+      if (exception.message.includes('duplicate key value violates unique constraint')) {
+        myResponseObject.statusCode = HttpStatus.CONFLICT;
+        myResponseObject.response = 'Duplicate entry detected';
+      } else {
+        myResponseObject.response = 'Database Error';
+      }
+    }
+    else if (exception instanceof Error) {
       myResponseObject.statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
       myResponseObject.response = exception.message;
     } else {
@@ -43,3 +57,4 @@ export class AllExceptionFilter extends BaseExceptionFilter {
     super.catch(exception, host);
   }
 }
+

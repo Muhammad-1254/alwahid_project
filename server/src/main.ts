@@ -7,7 +7,7 @@ import { AllExceptionFilter } from "./all-exceptions.filter";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule,{
-    // logger: ['error','warn','log','debug','verbose']
+    logger: ['error','warn','log','debug','verbose'],
     bufferLogs: true
   });
   app.useLogger(app.get(MyLoggerService))  // setting up custom logger by bufferLogs: true

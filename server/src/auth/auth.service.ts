@@ -26,22 +26,28 @@ export class AuthService {
   private readonly saltRounds = 10;
 
   async createNormalUser(createUser: CreateUserDto) {
-    const userId = uuid();
-    const hashPassword = await this.hashPassword(createUser.password);
-    const normalUser = new NormalUser({
-      ...createUser,
-      userId,
-      user: new User({
+    try {
+      const userId = uuid();
+      const hashPassword = await this.hashPassword(createUser.password);
+      const normalUser = new NormalUser({
         ...createUser,
-        userRoles: [UserRoleEnum.NORMAL],
-        password: hashPassword,
-        id: userId,
-      }),
-    });
-    await this.entityManager.save(normalUser);
-    /* eslint-disable @typescript-eslint/no-unused-vars */
-    const { password, ...rest } = { ...normalUser.user };
-    return { message: "User created successfully", data: null };
+        userId,
+        user: new User({
+          ...createUser,
+          userRoles: [UserRoleEnum.NORMAL],
+          password: hashPassword,
+          id: userId,
+        }),
+      });
+      await this.entityManager.save(normalUser);
+      /* eslint-disable @typescript-eslint/no-unused-vars */
+      const { password, ...rest } = { ...normalUser.user };
+      return { message: "User created successfully", data: rest};
+    } catch (error) {
+      console.log("error while creating normal user", error);
+    throw error;
+  }
+  
   }
 
   async normalUserRequestForCreator(
@@ -168,7 +174,7 @@ export class AuthService {
       email: isEmail(username) ? username : undefined,
       phoneNumber: isPhoneNumber(username) ? username : undefined,
     });
-    if (user && this.comparePassword(password, user.password)) {
+    if (user && await this.comparePassword(password, user.password)) {
       return user;
     }
     return null;

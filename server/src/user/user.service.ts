@@ -382,7 +382,10 @@ export class UserService {
       throw new Error("Email or Phone number is required for login");
     }
     return  await this.userRepository.findOne({
-      where: {email, phoneNumber},
+      where: [
+        {email},
+        {phoneNumber}
+      ],
       loadEagerRelations: false,
       select:['id','email', 'phoneNumber','password','userRoles']
     });

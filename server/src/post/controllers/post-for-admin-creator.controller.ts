@@ -5,6 +5,7 @@ import {
   Get,
   Ip,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -60,12 +61,12 @@ export class PostForAdminCreatorController {
   @Get("post/user/personal")
   findUserPersonalPosts(
     @Request() req,
-    @Query("from") from: number,
-    @Query("to") to: number,
+    @Query("skip", ParseIntPipe) skip:number,
+    @Query("take",ParseIntPipe) take: number,
   ) {
-    return this.postService.findUserPersonalPosts(req.user, from, to);
+    return this.postService.findUserPersonalPosts(req.user, skip, take);
   }
-
+  
   
   @Patch("post")
   updatePostContent(@Body() updateComment: UpdatePostContentDto) {

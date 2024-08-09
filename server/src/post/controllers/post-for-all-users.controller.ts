@@ -63,18 +63,18 @@ export class PostForAllUsersController {
   @Get("post/user/liked/personal")
   findUserPersonalLikedPosts(
     @Request() req,
-    @Query("from") from,
-    @Query("to") to,
+    @Query("skip", ParseIntPipe) skip,
+    @Query("take", ParseIntPipe) take,
   ) {
-    return this.postService.findUserPersonalLikedPosts(req.user, from, to);
+    return this.postService.findUserPersonalLikedPosts(req.user, skip, take);
   }
   @Get("post/user/saved/personal")
   findUserPersonalSavedPosts(
     @Request() req,
-    @Query("from") from,
-    @Query("to") to,
+    @Query("skip", ParseIntPipe) skip,
+    @Query("take",ParseIntPipe) take,
   ) {
-    return this.postService.findUserPersonalSavedPosts(req.user, from, to);
+    return this.postService.findUserPersonalSavedPosts(req.user, skip, take);
   }
 
   @Get("post")
