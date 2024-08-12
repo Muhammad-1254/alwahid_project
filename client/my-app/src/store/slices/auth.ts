@@ -3,25 +3,27 @@ import cAxios from "../../lib/cAxios";
 import { UserRoleEnum } from "@/src/types/user";
 import { jwtDecode } from "jwt-decode";
 
+export type UserDataAuthProps={
+  
+    userId: string ;
+    email: string;
+    firstname: string;
+    lastname: string;
+    avatarUrl?: string
+    phoneNumber: string
+    gender: string ;
+    dateOfBirth: string;
+    authProvider: string 
+    isVerified: boolean 
+    isSpecialUser: boolean 
+    followersCount: string;
+    followingCount: string;
+   
+}
+
 type UserDataProps = {
- user:{
-  userId: string | null;
-  email?: string;
-  firstname: string | null;
-  lastname: string | null;
-  avatarUrl?: string;
-  age?: number;
-  phoneNumber?: string;
-  gender: string | null;
-  dateOfBirth?: string;
-  authProvider: string | null;
-  isVerified: boolean | null;
-  isSpecialUser: boolean | null;
- }
- friends:{
-   followersCount: string;
-   followingCount: string;
-  }
+ user:UserDataAuthProps
+
 };
 type AuthInitialStateProps = {
   data: UserDataProps
@@ -32,19 +34,20 @@ type AuthInitialStateProps = {
 };
 export const userDataInitialState: UserDataProps = {
  user:{
-  userId: null,
-  firstname: null,
-  lastname: null,
+  userId: "",
+  firstname: "",
+  lastname: "",
   isVerified: false,
   isSpecialUser: false,
-  gender: null,
-  authProvider: null,
- },
- friends:{
-   followersCount: "",
-   followingCount: '',
-  },
+  gender: "",
+  email: "",
+  phoneNumber: "",
+  dateOfBirth: "",
+  authProvider:"local",
+  followersCount: "0",
+  followingCount: "0",
 
+ },
 };
 
 export const authInitialState: AuthInitialStateProps = {
@@ -59,9 +62,8 @@ const authSlice = createSlice({
   name: "auth",
   initialState: authInitialState,
   reducers: {
-    setUser: (state, action: PayloadAction<UserDataProps>) => {
-      state.data.user = action.payload.user;
-      state.data.friends= action.payload.friends;
+    setUser: (state, action) => {
+      state.data.user = {...state.data.user, ...action.payload};
     },
     setUserRole: (state, action: PayloadAction<UserRoleEnum>) => {
       state.userRole = action.payload;

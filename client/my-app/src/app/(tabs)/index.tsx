@@ -152,7 +152,6 @@ export const HomePagePostMediaItem = ({
     const data = homePageData.find((data) => data.id == item.postId);
     if (data) {
       dispatch(setPostDetailsData(data));
-      router.push("/postDetails");
     }
   };
   return (
@@ -191,16 +190,13 @@ export const HomePagePostUsersInteractions = ({
     const data = homePageData.find((data) => data.id == item.postId);
     if (data) {
       dispatch(setPostDetailsData(data));
-      router.navigate("/postComments");
     }
   };
   const segment = useSegments();
 
   function commentIconClickHandler() {
     if (segment[segment.length - 1] == "postDetails") {
-      router.replace("/postComments");
     } else {
-      router.push("/postComments");
     }
   }
   return (

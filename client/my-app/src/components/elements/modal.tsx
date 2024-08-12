@@ -1,5 +1,5 @@
 import { FC } from "react";
-import { Pressable, TouchableWithoutFeedback, View } from "react-native";
+import { DimensionValue, Pressable, TouchableWithoutFeedback, View } from "react-native";
 import { KeyboardAvoidingView, Modal as RNModal } from "react-native";
 
 type ModalProps = {
@@ -10,6 +10,8 @@ type ModalProps = {
   children: React.ReactNode;
   transparent?: boolean;
   showStatusBar?: boolean;
+  modalWidth?:DimensionValue;
+  modalHeight?:DimensionValue;
   bgOpacity?: number;
 };
 const Modal: FC<ModalProps> = ({
@@ -21,6 +23,8 @@ const Modal: FC<ModalProps> = ({
   transparent,
   showStatusBar,
   bgOpacity,
+  modalHeight,
+  modalWidth,
 }) => {
   const content = withInput ? (
     <KeyboardAvoidingView behavior="padding"></KeyboardAvoidingView>
@@ -36,7 +40,8 @@ const Modal: FC<ModalProps> = ({
       statusBarTranslucent={!showStatusBar}
       animationType={animationType || "slide"}
     >
-      <View className="relative w-full h-full items-center justify-center ">
+      <View style={{width:modalHeight ??"100%",height:modalHeight??"100%"}} 
+      className="relative items-center justify-center ">
         <Pressable
           onPress={() => setVisible && setVisible(false)}
           style={{ opacity: bgOpacity ?? 0.5 }}

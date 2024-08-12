@@ -9,11 +9,17 @@ export enum PostLikeEnum{
     WOW = "wow",
 }
 
+export enum PostLikeTargetEnum {
+    POST = "post",
+    COMMENT = "comment",
+}
+
 
 export type PaginationType ={
     skip: number;
     take: number;
 }
+
 
 
 export const dummyCommentLikes = [

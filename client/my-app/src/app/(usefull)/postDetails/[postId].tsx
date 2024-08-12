@@ -4,7 +4,7 @@ import {
   Image,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
+  useWindowDimensions,
 } from "react-native";
 import React, { FC, useEffect, useRef, useState } from "react";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
@@ -18,85 +18,82 @@ import {
   getVideoPropsFromUrl,
   getImageAspectRatio,
   getAspectRatio,
+  getPostLikeIcon,
 } from "@/src/lib/utils";
 import { AntDesign, EvilIcons, Ionicons } from "@expo/vector-icons";
 import { useColorScheme } from "nativewind";
 import { Colors } from "@/src/constants/Colors";
-import Modal from "@/src/components/elements/modal";
-import { ResizeMode, Video } from "expo-av";
 import Divider from "@/src/components/elements/Divider";
+import ErrorHandler from "@/src/lib/ErrorHandler";
+import { PostLikeEnum, PostLikeTargetEnum } from "@/src/types/post";
+import ChooseLikeTypeModal from "@/src/components/modals/ChooseLikeTypeModal";
+import MediaViewModal, { MediaViewModalDataType } from "@/src/components/modals/MediaViewModal";
 
 type PostUserType = {
+  id: string;
   firstname: string;
   lastname: string;
   avatarUrl: string | null;
+  role: UserRoleEnum;
+  isPostSaved: boolean;
+  isPostLiked: boolean;
+  postLikeType: PostLikeEnum|null;
 };
-type LastUserInteraction = {
-  firstname: string | null;
-  lastname: string | null;
+type PublicInteractionsType = {
+  totalLikes: string;
+  totalComments: string;
+  mostLikeTypes: {
+    likeType: PostLikeEnum;
+    count: string;
+  }[];
 };
 type PostMediasType = {
   id: string;
   mimeType: string;
   url: string;
+  postId: string;
 }[];
-type PostDataProps = {
-  post: {
-    id: string;
-    textContent: string | null;
-    createdAt: string;
-    postBy: UserRoleEnum.ADMIN | UserRoleEnum.CREATOR;
-  };
+type PostDataType = {
+  postId: string;
+  createdAt: string;
+  textContent: string | null;
   postMedias: PostMediasType;
   user: PostUserType;
-
-  lastLike: {
-    likeType: string;
-  };
-  lastLikeUser: LastUserInteraction;
-  lastComment: {
-    createdAt: string;
-    content: string;
-  };
-  lastCommentUser: LastUserInteraction;
-  isCurrentUserLiked: string | null;
-  likesCount: string;
-  commentsCount: string;
+  interactions: PublicInteractionsType;
 };
 
 export default function PostDetailsScreen() {
-  const [data, setData] = useState<PostDataProps | null>(null);
+  const [data, setData] = useState<PostDataType | null>(null);
   const [loading, setLoading] = useState(false);
   const { postId } = useLocalSearchParams();
   const router = useRouter();
   const { colorScheme } = useColorScheme();
   const userId = useAppSelector((s) => s.auth.data.user.userId);
-  console.log("isCurrentUserLiked: ",data?.isCurrentUserLiked)
-  useEffect(() => {
-    async function getPost() {
-      let api: string;
-      if (userId) {
-        api = `${apiRoutes.getSinglePostData}/${postId}?userId=${userId}`;
-      } else {
-        api = `${apiRoutes.getSinglePostData}/${postId}`;
-      }
-      console.log(api);
-      try {
-        setLoading(true);
-        const postsData = await (await cAxios.get(api)).data;
-        setData(postsData);
-        // console.log(postsData);
-        setLoading(false);
-      } catch (error) {
-        console.error("error from post detail screen: ", error);
-        setLoading(false);
-        throw error;
-      }
+
+  async function getPost() {
+    let api: string;
+    if (userId) {
+      api = `${apiRoutes.getSinglePostData}/${postId}?userId=${userId}`;
+    } else {
+      api = `${apiRoutes.getSinglePostData}/${postId}`;
     }
-    if (data === null) {
+    try {
+      setLoading(true);
+      const res = await cAxios.get(api);
+      setData(res.data);
+      setLoading(false);
+    } catch (error) {
+      console.error("error from post detail screen: ", error);
+      setLoading(false);
+      ErrorHandler.handle(error);
+    }
+  }
+
+  useEffect(() => {
+    if (!data) {
       getPost();
     }
-  }, [postId, userId]);
+  }, [userId]);
 
   return (
     <>
@@ -129,26 +126,16 @@ export default function PostDetailsScreen() {
       ) : (
         <View className="flex-1 justify-end">
           <ScrollView className="flex-1 bg-background dark:bg-backgroundDark pt-4">
-            <PostUserComponent
-              createdAt={data.post.createdAt}
-              user={data.user}
-            />
-            {data.post.textContent && (
-              <PostTextComponent text={data.post.textContent} />
-            )}
-            <PostMediaComponent media={data.postMedias} />
+            <PostUserComponent createdAt={data?.createdAt} user={data?.user} />
+            {data.textContent && <PostTextComponent text={data?.textContent} />}
+            <PostMediaComponent media={data?.postMedias} />
           </ScrollView>
+
           <PublicInteractions
-            data={{
-              postId:typeof postId==='string'?postId:postId[0],
-              lastLike: data.lastLike,
-              lastLikeUser: data.lastLikeUser,
-              lastComment: data.lastComment,
-              lastCommentUser: data.lastCommentUser,
-              isCurrentUserLiked: data.isCurrentUserLiked,
-              likesCount: data.likesCount,
-              commentsCount: data.commentsCount,
-            }}
+            interactions={data?.interactions}
+            user={data?.user}
+            postId={data?.postId}
+            setData={setData}
           />
         </View>
       )}
@@ -236,7 +223,7 @@ type MediaDataProps = {
 const PostMediaComponent: FC<PostMediaComponentProps> = ({ media }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [mediaData, setMediaData] = useState<MediaDataProps[]>([]);
-  const [mediaModalData, setMediaModalData] = useState<mediaModalDataType>();
+  const [mediaModalData, setMediaModalData] = useState<MediaViewModalDataType>();
 
   useEffect(() => {
     async function prepareMedia() {
@@ -277,9 +264,7 @@ const PostMediaComponent: FC<PostMediaComponentProps> = ({ media }) => {
     prepareMedia();
   }, []);
   const imagePressHandler = (id: string) => {
-    console.log(id);
     const data = mediaData.find((item) => item.id === id);
-    console.log(data);
     setMediaModalData({
       mimeType: data?.mimeType,
       ar: data?.aspectRatio,
@@ -377,275 +362,326 @@ const PostMediaItemComponent: FC<PostMediaItemComponentProps> = ({
   );
 };
 
-interface MediaViewModalProps extends mediaModalDataType {
-  visible: boolean;
-  setVisible: React.Dispatch<React.SetStateAction<boolean>>;
-}
-
-type mediaModalDataType = {
-  url?: string;
-  mimeType?: string;
-  videoUrl?: string | null;
-  ar?: string;
-};
-const MediaViewModal: FC<MediaViewModalProps> = ({
-  setVisible,
-  visible,
-  mimeType,
-  url,
-  videoUrl,
-  ar,
-}) => {
-  const ref = useRef<Video>(null);
-  const { width, height } = Dimensions.get("window");
-  const [contentDimensions, setContentDimensions] = useState({ width, height });
-
-  useEffect(() => {
-    if (ar) {
-      const [w, h] = ar.split("/").map(Number);
-      const height_ = (width / w) * h;
-      if (height_ >= height - 100) {
-        setContentDimensions({
-          width: (width / 100) * 92,
-          height: (height / 100) * 92,
-        });
-      } else {
-        setContentDimensions({ width, height: height_ });
-      }
-    }
-  }, [ar]);
-  return (
-    <Modal
-      visible={visible}
-      setVisible={setVisible}
-      transparent={true}
-      animationType="fade"
-      showStatusBar={true}
-      withInput={false}
-      bgOpacity={0.8}
-    >
-      <View
-        style={{
-          width: contentDimensions.width,
-          height: contentDimensions.height,
-        }}
-      >
-        {mimeType?.includes("image") && (
-          <Image
-            className="w-full h-full"
-            source={{ uri: url }}
-            resizeMethod="resize"
-            resizeMode="contain"
-            alt="image"
-          />
-        )}
-        {mimeType?.includes("video") && videoUrl && (
-          <Video
-            ref={ref}
-            source={{ uri: videoUrl }}
-            className="w-full h-full"
-            resizeMode={ResizeMode.COVER}
-            useNativeControls
-            isLooping
-          />
-        )}
-      </View>
-    </Modal>
-  );
-};
 
 type PublicInteractionsProps = {
-  data: {
-    postId:string,
-    lastLike: { likeType: string | null };
-    lastLikeUser: LastUserInteraction;
-    lastComment: { createdAt: string | null; content: string | null };
-    lastCommentUser: LastUserInteraction;
-    isCurrentUserLiked: string | null;
-    likesCount: string;
-    commentsCount: string;
-  };
+  user: PostUserType;
+  interactions: PublicInteractionsType;
+  setData: React.Dispatch<React.SetStateAction<PostDataType | null>>
+  postId: string;
 };
-const PublicInteractions: FC<PublicInteractionsProps> = ({ data }) => {
-  const {
-    commentsCount,
-    postId,
-    isCurrentUserLiked,
-    lastComment,
-    lastCommentUser,
-    lastLike,
-    lastLikeUser,
-    likesCount,
-  } = data;
-  const { colorScheme } = useColorScheme();
-  const [isSave, setIsSaved] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
-  const [loading,setLoading] = useState(false)
+const postInteractionControlsInitialState ={
+  like:{
+    loading: false
+  },
+  save:{
+    loading: false
+  }
+} 
+const PublicInteractions: FC<PublicInteractionsProps> = ({
+  interactions,
+  user,
+  postId,
+  setData
+  
+}) => {
+
+  const [postInteractionControls, setPostInteractionControls] = useState(postInteractionControlsInitialState)
+  const [loading, setLoading] = useState(false);
+  
+  const [chooseLikeModal ,setChooseLikeModal] = useState(false);
   const [shareModalVisible, setShareModalVisible] = useState(false);
-
-  useEffect(() => {
-    console.log({ isCurrentUserLiked });
-    if (isCurrentUserLiked) {
-      setIsLiked(true);
-    } else {
-      setIsLiked(false);
-    }
-  }, [isCurrentUserLiked]);
-  const router = useRouter ()
-
-  const lastLikeUsername =
-    lastLikeUser?.firstname + " " + lastLikeUser?.lastname;
-  const likesCountNumber = Number.parseInt(likesCount);
+  
+  const router = useRouter();
+  const { colorScheme } = useColorScheme();
+  const { height} = useWindowDimensions()
   
 
-  const likePostHandler =async ()=>{
-    const body = {
-      postId,
-      likeType:'like'
-    }
-    console.log({body})
-    try {
-      setLoading(true)
-      const res = await cAxios.post(apiRoutes.createPostLike,body)
-      if(res.status === 201){
-        setIsLiked(true)
-      }else{
-        setIsLiked(false)
-      }
-      console.log(res.data.message)
-    } catch (error) {
-      console.log("error while liking post")
-    }finally{
-      setLoading(false)
-    }
-  }
-  
-  const commentPostHandler =()=>{
-    router.push({pathname:`/(usefull)/(modals)/comments/[postId]`,params:{postId}})
-  }
-  const savePostHandler =async () => {
-    const body = {
-      postId,
-    }
-    console.log({body})
-    try {
-      setLoading(true)
-      const res = await cAxios.post(apiRoutes.createPostSave,body)
-      if(res.status === 201){
-        setIsSaved(true)
-      }else{
-        setIsSaved(false)
-      }
-      console.log(res.data.message)
-    } catch (error) {
-      console.log("error while saving post")
-    }finally{
-      setLoading(false)
+  const likeScreenHandler = () => {
+    router.push({
+      // @ts-ignore
+      pathname: `/(usefull)/(modals)/likes/[targetType,id]`,
+      params: { targetType: PostLikeTargetEnum.POST, id: postId },
 
-    }
+    });
   };
+  const commentScreenHandler = () => {
+    router.push({
+      pathname: `/(usefull)/(modals)/comments/[postId]`,
+      params: { postId },
+    });
+  };
+  const chooseLikeModalHandler =async (likeType:PostLikeEnum)=>{
+    // this is trigger by modal check if likeType same then do nothing
+    if(user.postLikeType === likeType)return
+    await likePostToggle(likeType);
+  }
+
   
+  const likePostToggle = async (likeType:PostLikeEnum) => {
+    // like btn is toggle type btn 
+    if(postInteractionControls.like.loading)return
+
+    setPostInteractionControls((prev)=>({...prev,like:{...prev.like,loading:true,}}));
+    try {
+      if(user.isPostLiked){
+        if(likeType === user.postLikeType){
+          const res = await cAxios.delete(`${apiRoutes.removePostLike}/${postId}`);
+          if(res.status === 200)
+            setData(prev =>prev===null?null:(
+                {
+                  ...prev,
+                  user:{
+                    ...prev?.user,
+                    isPostLiked:false,
+                    postLikeType:null
+                  },
+                  interactions:{
+                    ...prev.interactions,
+                    totalLikes: (parseInt(prev.interactions.totalLikes) -1).toString(),
+                  }
+                }
+              )
+            )
+          
+        }else if(likeType !== user.postLikeType){
+          // update like type
+          const res = await cAxios.patch(apiRoutes.updatePostLike, {postId, likeType});
+          if(res.status === 200)
+            setData(prev => prev === null?null:(
+                {
+                  ...prev,
+                  user:{
+                    ...prev?.user,
+                    postLikeType:likeType
+                  },
+                }
+              )
+            )
+        }
+      }else{
+        // create like post
+        const res = await cAxios.post(apiRoutes.createPostLike, {postId, likeType});
+        if (res.status === 201)
+          setData(prev =>prev===null?null:(
+              {
+                ...prev,
+                user:{
+                  ...prev?.user,
+                  isPostLiked:true,
+                  postLikeType:likeType
+                },
+                interactions:{
+                  ...prev.interactions,
+                  totalLikes: (parseInt(prev.interactions.totalLikes) +1).toString(),
+                }
+              }
+            )
+          )   
+    }
+  }
+      catch (error) {
+        console.log("error while toggle like post: ",error);
+        ErrorHandler.handle(error);
+      } finally {
+        setPostInteractionControls((prev)=>({...prev,like:{...prev.like,loading:false,}}));
+      }
+    
+
+  }
+   
+
+  const savePostToggle = async () => {
+     // save btn is toggle type btn first check if isSave true then unsave
+     if(postInteractionControls.save.loading)return
+     try {
+       setPostInteractionControls((prev)=>({...prev,save:{...prev.save,loading:true,}}));
+    if(user.isPostSaved){
+      // unsave post
+        const res = await cAxios.delete(`${apiRoutes.removePostSave}/${postId}`);
+        if(res.status === 200){
+          setData(prev=>prev===null?null:(
+              {
+                ...prev,
+                user:{
+                  ...prev?.user,
+                  isPostSaved:false
+                }
+              }
+            )
+          )
+        }
+      }else{
+        // save post
+        const res = await cAxios.post(apiRoutes.createPostSave, {postId});
+        if (res.status === 201){
+          setData(prev=>prev===null?null:(
+            {
+              ...prev,
+              user:{
+                ...prev?.user,
+                isPostSaved:true
+              }
+            }
+          )
+        )
+        }
+      }
+     } catch (error) {
+        console.log("error while saving post: ",error);
+        ErrorHandler.handle(error);
+      } finally {
+        setPostInteractionControls((prev)=>({...prev,save:{...prev.save,loading:false,}}));
+      }
+  };
+
+    console.log({postId})
+
   return (
     <>
-    <View className="w-full   bg-mutedDark">
-      <View className="w-full flex-row items-center justify-between  mt-1.5 ">
-        <View className="flex-row items-center w-[72%] pl-1">
-          {lastLike.likeType && (
-            <>
-              <Text className="text-primary dark:text-primaryDark ">
-                {lastLike.likeType}
+      <View className="w-full   bg-mutedDark">
+        <View className="w-full flex-row items-center justify-between   px-4 ">
+          {/*  display most 3 like Types */}
+          <View className="flex-1 flex-row items-center justify-start gap-x-1.5  ">
+            <Pressable onPress={likeScreenHandler} disabled={loading}>
+              {interactions.mostLikeTypes
+                .sort((a, b) => parseInt(b.count) - parseInt(a.count))
+                .slice(0, 3)
+                .map((item, index) => (
+                  <Image
+                    key={index}
+                    className="w-7 h-7"
+                    source={getPostLikeIcon(item.likeType)}
+                    resizeMethod="resize"
+                    resizeMode="center"
+                    alt={item.likeType}
+                  />
+                ))}
+            </Pressable>
+          </View>
+          <View className="flex-row items-center justify-center flex-1 gap-x-4">
+            <Pressable
+              className="flex-1"
+              onPress={likeScreenHandler}
+              disabled={loading}
+            >
+              <Text className="text-center text-xs text-primary dark:text-primaryDark">
+                {parseInt(interactions.totalLikes) === 1
+                  ? `${interactions.totalLikes}\nLike`
+                  : `${interactions.totalLikes}\nLikes`}{" "}
               </Text>
-              <Text className="text-primary dark:text-primaryDark ">
-                {lastLikeUsername.length > 12
-                  ? lastLikeUsername.slice(0, 10) + " ..."
-                  : lastLikeUsername}
+            </Pressable>
+            <Pressable
+              className="flex-1 "
+              onPress={commentScreenHandler}
+              disabled={loading}
+            >
+              <Text className="text-center text-xs text-primary dark:text-primaryDark ">
+                {parseInt(interactions.totalComments) === 1
+                  ? `${interactions.totalComments}\nComment`
+                  : `${interactions.totalComments}\nComments`}{" "}
               </Text>
-
-              {likesCountNumber - 1 > 0 && (
-                <Text className="text-primary dark:text-primaryDark">
-                  {likesCountNumber - 1}
-                  {likesCountNumber - 1 === 1 ? " & other" : " & others"}
-                </Text>
-              )}
-            </>
-          )}
+            </Pressable>
+          </View>
         </View>
-        <Text
-          style={{ textAlign: "right" }}
-          className="text-primary  dark:text-primaryDark  w-[28%] pr-1"
-        >
-          {commentsCount}&nbsp;
-          <Text className="text-primary  dark:text-primaryDark opacity-60">
-            {commentsCount === "1" ? "comment" : "comments"}
-          </Text>
-        </Text>
+
+        <Divider styles=" bg-mutedForeground dark:bg-mutedForegroundDark my-0.5 w-[95%] mx-auto opacity-30" />
+
+        <View className="w-full h-16 flex-row items-center justify-between  ">
+          <Pressable
+            className="w-[25%] h-full items-center justify-start pt-1"
+
+            // if longPress then show like type modal
+            onLongPress={()=>setChooseLikeModal(true)}
+            // if liked and press then unlike
+            // if not liked and press then like
+            onPress={()=>user.isPostLiked ? likePostToggle(user.postLikeType!) : likePostToggle(PostLikeEnum.LIKE)}
+            disabled={postInteractionControls.like.loading}
+          >
+            {user.isPostLiked ? (
+<Image
+className="w-8 h-8"
+resizeMethod="resize"
+resizeMode="center"
+
+  source={getPostLikeIcon(user.postLikeType!)}
+/>
+            ):(
+              <AntDesign
+              name={"like2"}
+              size={32}
+              color={
+                colorScheme === "dark"
+                  ? Colors.dark.primary
+                  : Colors.light.primary
+              }
+            />
+            )}
+           
+            <Text className="text-primary dark:text-primaryDark opacity-75 text-xs">
+              {user.isPostLiked?user.postLikeType:"like"}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            className="w-[25%] h-full items-center justify-start pt-1"
+            onPress={commentScreenHandler}
+            disabled={loading}
+          >
+            <EvilIcons
+              name="comment"
+              size={42}
+              color={
+                colorScheme === "dark"
+                  ? Colors.dark.primary
+                  : Colors.light.primary
+              }
+            />
+            <Text className="text-primary dark:text-primaryDark opacity-75 text-xs">
+              Comment
+            </Text>
+          </Pressable>
+          <Pressable className="w-[25%] h-full items-center justify-start pt-1">
+            <EvilIcons
+              name="share-google"
+              size={42}
+              color={
+                colorScheme === "dark"
+                  ? Colors.dark.primary
+                  : Colors.light.primary
+              }
+            />
+            <Text className="text-primary dark:text-primaryDark opacity-75 text-xs">
+              Share
+            </Text>
+          </Pressable>
+
+          <Pressable
+            className="w-[25%] h-full items-center justify-start pt-1"
+            onPress={savePostToggle}
+
+            disabled={postInteractionControls.save.loading}
+          >
+            <Ionicons
+              name={user.isPostSaved ? "bookmark" : "bookmark-outline"}
+              size={35}
+              color={
+                colorScheme === "dark"
+                  ? Colors.dark.primary
+                  : Colors.light.primary
+              }
+            />
+            <Text className="text-primary dark:text-primaryDark opacity-75 text-xs">
+              Save
+            </Text>
+          </Pressable>
+        </View>
       </View>
-
-      <Divider styles=" bg-mutedForeground dark:bg-mutedForegroundDark my-0.5 w-[95%] mx-auto opacity-30" />
-
-      <View className="w-full h-16 flex-row items-center justify-between  ">
-        <Pressable className="w-[25%] h-full items-center justify-start pt-1" onPress={likePostHandler} disabled={loading}>
-          <AntDesign
-            name={isLiked || isCurrentUserLiked ? "like1" : "like2"}
-            size={32}
-            color={
-              colorScheme === "dark"
-                ? Colors.dark.primary
-                : Colors.light.primary
-            }
-          />
-          <Text className="text-primary dark:text-primaryDark opacity-75 text-xs">
-            Like
-          </Text>
-        </Pressable>
-
-        <Pressable className="w-[25%] h-full items-center justify-start pt-1" onPress={commentPostHandler} disabled={loading}>
-          <EvilIcons
-            name="comment"
-            size={42}
-            color={
-              colorScheme === "dark"
-                ? Colors.dark.primary
-                : Colors.light.primary
-            }
-          />
-          <Text className="text-primary dark:text-primaryDark opacity-75 text-xs">
-            Comment
-          </Text>
-        </Pressable>
-        <Pressable className="w-[25%] h-full items-center justify-start pt-1">
-          <EvilIcons
-            name="share-google"
-            size={42}
-            color={
-              colorScheme === "dark"
-                ? Colors.dark.primary
-                : Colors.light.primary
-            }
-          />
-          <Text className="text-primary dark:text-primaryDark opacity-75 text-xs">
-            Share
-          </Text>
-        </Pressable>
-
-        <Pressable className="w-[25%] h-full items-center justify-start pt-1" onPress={savePostHandler} disabled={loading}>
-          <Ionicons
-            name={isSave ? "bookmark" : "bookmark-outline"}
-            size={35}
-            color={
-              colorScheme === "dark"
-                ? Colors.dark.primary
-                : Colors.light.primary
-            }
-          />
-          <Text className="text-primary dark:text-primaryDark opacity-75 text-xs">
-            Save
-          </Text>
-        </Pressable>
-      </View>
-    </View>
-  
+      <ChooseLikeTypeModal
+      visible={chooseLikeModal}
+      setVisible={setChooseLikeModal}
+      modalPosition={{ x: 20, y: height }}
+      likeHandler={chooseLikeModalHandler}
+      />
     </>
-
   );
 };

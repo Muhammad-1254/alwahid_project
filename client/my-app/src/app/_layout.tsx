@@ -15,10 +15,10 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { PersistGate } from "redux-persist/integration/react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
-import Toast from "react-native-toast-message";
 import { JsStack } from "../components/elements/CustomJsStack";
 import { TransitionPresets } from "@react-navigation/stack";
 import { globalErrorHandler } from "@/src/lib/ErrorHandler";
+import { RootSiblingParent } from 'react-native-root-siblings';
 
 
 
@@ -49,7 +49,8 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <BottomSheetModalProvider>
-          <Toast />
+            <RootSiblingParent>
+
           <StoreProvider store={store}>
             <PersistGate loading={null} persistor={persistor}>
               <AuthProvider>
@@ -133,6 +134,14 @@ export default function RootLayout() {
                     }}
                   />
                    <JsStack.Screen
+                    name="(usefull)/(modals)/likes/[targetType,id]"
+                    options={{
+                      headerShown: false,
+                      ...TransitionPresets.SlideFromRightIOS,
+                      gestureEnabled: true,
+                    }}
+                  />
+                   <JsStack.Screen
                     name="(usefull)/(modals)/sortData"
                     options={{ presentation: "modal",
                       headerShown: false,
@@ -146,6 +155,8 @@ export default function RootLayout() {
               </AuthProvider>
             </PersistGate>
           </StoreProvider>
+          </RootSiblingParent>
+
         </BottomSheetModalProvider>
       </GestureHandlerRootView>
     </SafeAreaProvider>

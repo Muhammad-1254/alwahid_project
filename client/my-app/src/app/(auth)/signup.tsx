@@ -191,8 +191,8 @@ export default function SignUp() {
 
   const onDateChange = (event: any, selectedDate: any) => {
     const currentDate = selectedDate || date;
-    setDateShow(Platform.OS === "ios");
     setDate(currentDate);
+    setDateShow(false);
   };
   const showDatePicker = () => {
     setDateShow(true);

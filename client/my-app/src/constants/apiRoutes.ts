@@ -15,7 +15,8 @@ export const apiRoutes = {
   createPostSave: `${prefix}/post/save`,  // body=> postId
   createPostCommentLike: `${prefix}/post/comment/like`, // body=> commentId, likeType
 
-
+  // user profile
+  getProfileAvatarPresignedUrl: `${prefix}/user/profile/avatar/presigned-url`, // body:{filename:string, fileSize:number, mimeType:string}
 
 
 
@@ -29,8 +30,11 @@ export const apiRoutes = {
 
   // user posts
   getSinglePostData :`${prefix}/unsecure/post`, // unsecure
-  getAllPostComments: `${prefix}/post/comments/all`,  //for all users /951b6bb5-b71c-4337-81f7-2679093f2c39?from=0&to=2
-
+  getAllPostComments: `${prefix}/post/comments/all`,  // for all users /951b6bb5-b71c-4337-81f7-2679093f2c39?skip=0&take=2
+  getAllPostLikes:`${prefix}/post/likes/all`,           // for all postLikes /951b6bb5-b71c-4337-81f7-2679093f2c39?skip=0&take=10&isLatest=false
+  getAllPostCommentLikes:`${prefix}/post/comment/likes/all`,           // for all postComment likes /951b6bb5-b71c-4337-81f7-2679093f2c39?skip=0&take=10&isLatest=false
+  
+  
   // mix
   getAllCountryFlagsCode: `${prefix}/mix/get/all/country-code`,
 
@@ -40,10 +44,15 @@ export const apiRoutes = {
 ///////////// PATCH ////////////////
   // user posts
   updatePostCommentLike :`${prefix}/post/comment/like`, // body=> commentId, likeType
-
+  updatePostLike: `${prefix}/post/like`,  // body=> postId, likeType
+  updateUserProfileBasicInfo: `${prefix}/user/profile/basic` , // body=> 
+  
+  // user profile
+  updateUserProfileAvatar: `${prefix}/user/profile/avatar`, // body=> {key:string}
   /////////////// DELETE ////////////////
  // user posts
-  deletePostCommentLike :`${prefix}/post/comment/like`, // body=> commentId
-
+  removePostCommentLike :`${prefix}/post/comment/like`, // Param=> commentId
+  removePostLike: `${prefix}/post/like`,  // Param=> postId
+  removePostSave: `${prefix}/post/save`,  // Param=> postId
 
 };

@@ -37,6 +37,7 @@ import ContentLoader, { Rect } from "react-content-loader/native";
 import { RefreshControl } from "react-native-gesture-handler";
 import { PaginationType } from "@/src/types/post";
 import ErrorHandler from "@/src/lib/ErrorHandler";
+import MediaViewModal, { MediaViewModalDataType } from "@/src/components/modals/MediaViewModal";
 
 type PostMediasProps = {
   id: string;
@@ -79,6 +80,11 @@ export default function Profile() {
   const IMG_HEIGHT = useMemo(() => 240, []);
   const scrollY = useRef(new Animated.Value(0));
 
+  //profile image view 
+  const [mediaModalVisible, setMediaModalVisible] = useState(false);
+  const [mediaModalData, setMediaModalData] = useState<MediaViewModalDataType>();
+const profileImageUrl = useAppSelector(s=>s.auth.data.user.avatarUrl)
+
   const [posts, setPosts] = useState<PostDataType[]>([]);
   const [savedPosts, setSavedPosts] = useState<PostDataType[]>([]);
   const [likedPosts, setLikedPosts] = useState<PostDataType[]>([]);
@@ -94,26 +100,31 @@ const [postControl, setPostControl] = useState(postControlInitial)
   const router = useRouter();
 
   // get user profile data
-  useEffect(() => {
-    async function getProfileData() {
-      try {
-        const res = await cAxios.get(`${apiRoutes.getUserProfileData}`);
-        const data = {
-          user: res.data.user,
-          friends: {
-            followersCount: res.data.followersCount,
-            followingCount: res.data.followingCount,
-          },
-        };
-        dispatch(setUser(data));
-        dispatch(setUserRole(res.data.user.userRole));
-      } catch (error) {
-        console.log("error from fetching user profile data :", error);
-      }
+  async function getProfileData() {
+    try {
+      const res = await cAxios.get(`${apiRoutes.getUserProfileData}`);
+      console.log("data from api: " ,res.data)
+      dispatch(setUser(res.data));
+      dispatch(setUserRole(res.data.userRole));
+    } catch (error) {
+      console.log("error from fetching user profile data :", error);
+      ErrorHandler.handle(error);
     }
-    console.log("profile data called");
+  }
+  useEffect(() => {
     getProfileData();
   }, []);
+
+const profileImagePressHandler =()=>{
+  setMediaModalData({
+    url:profileImageUrl===null?"@/src/assets/images/avatar-null.jpg"
+    :profileImageUrl,
+    mimeType:"image"
+  })
+  setMediaModalVisible(true)
+} 
+
+
 
   const getPersonalPostData = async () => {
     try {
@@ -204,17 +215,11 @@ const [postControl, setPostControl] = useState(postControlInitial)
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    // checking current active tab then reload it
-    if (tabIndex === ProfileTabEnum.POSTS) {
-    setPostControl((prev)=>({...prev,post:{...prev.post,page:pageInitialState,isComplete:false}}))
+    setPostControl(postControlInitial)
       setPosts([]);
-    }  else if (tabIndex === ProfileTabEnum.LIKED_POSTS) {
-      setPostControl((prev)=>({...prev,likePost:{...prev.likePost,page:pageInitialState,isComplete:false}}))
       setLikedPosts([]);
-    }else if (tabIndex === ProfileTabEnum.SAVED_POSTS) {
-      setPostControl((prev)=>({...prev,savedPost:{...prev.savedPost,page:pageInitialState,isComplete:false}}))
        setSavedPosts([]);
-     }
+    await getProfileData()
     setRefreshing(false);
   }, []);
   const imageAnimatedStyle = {
@@ -286,13 +291,17 @@ const [postControl, setPostControl] = useState(postControlInitial)
         ListHeaderComponent={() => (
           <View className="">
             {/* bg image  */}
+            <Pressable 
+            onLongPress={profileImagePressHandler}
+            >
             <Animated.Image
               style={[{ height: IMG_HEIGHT }, imageAnimatedStyle]}
               className="w-full "
-              source={{
-                uri: "https://images.pexels.com/photos/1300402/pexels-photo-1300402.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
-              }}
-            />
+              source={profileImageUrl===null?require("@/src/assets/images/avatar-null.jpg"):
+                {uri:profileImageUrl}
+              }
+              />
+              </Pressable>
             <UserProfileInfo />
             <Tabs tabIndex={tabIndex} setTabIndex={setTabIndex} />
           </View>
@@ -303,8 +312,7 @@ const [postControl, setPostControl] = useState(postControlInitial)
         )}
         onEndReached={onEndReachedHandler}
         onEndReachedThreshold={0.5}
-        // TODO: remove random here
-        keyExtractor={(item) => `${item}-${Math.random()}`}
+        keyExtractor={(item) => `${item}__${Math.random()}`}
         style={{
           backgroundColor:
             colorScheme === "dark"
@@ -329,6 +337,14 @@ const [postControl, setPostControl] = useState(postControlInitial)
         )}
         ListEmptyComponent={<TabDataSkeleton tabIndex={tabIndex} />}
         ListFooterComponent={() => <ListFooterComponent loading={loading} />}
+      />
+      <MediaViewModal
+        setVisible={setMediaModalVisible}
+        visible={mediaModalVisible}
+        ar={mediaModalData?.ar}
+        mimeType={mediaModalData?.mimeType}
+        url={mediaModalData?.url}
+        videoUrl={mediaModalData?.videoUrl}
       />
     </>
   );
@@ -416,13 +432,13 @@ const ListFooterComponent: FC<ListFooterComponentProps> = ({ loading }) => {
 };
 const UserProfileInfo = () => {
   const { data, userRole } = useAppSelector((state) => state.auth);
-  const { friends, user } = data;
+  const router = useRouter();
   return (
     <View className="w-full  bg-background dark:bg-backgroundDark pb-5">
       <View className="flex-row  items-start justify-center mt-2">
         <View className=" w-[50%]">
           <Text className="text-primary dark:text-primaryDark text-base capitalize">
-            {user.firstname}&nbsp;{user.lastname}
+            {data.user?.firstname}&nbsp;{data.user?.lastname}
           </Text>
           <Text className="text-primary dark:text-primaryDark opacity-60">
             role: {userRole}
@@ -431,17 +447,19 @@ const UserProfileInfo = () => {
         <View className="w-[50%] flex-row items-center gap-x-8">
           <Text className="text-primary dark:text-primaryDark text-center">
             Followers{"\n"}
-            {friends.followersCount}
+            {data.user.followersCount}
           </Text>
           <Text className="text-primary dark:text-primaryDark text-center">
             Following{"\n"}
-            {friends.followingCount}
+            {data.user.followingCount}
           </Text>
         </View>
       </View>
 
       <View className="w-full  flex-row items-center justify-evenly mt-5">
-        <Pressable className="w-[40%] py-1.5 items-center bg-muted dark:bg-mutedDark rounded-md">
+        <Pressable className="w-[40%] py-1.5 items-center bg-muted dark:bg-mutedDark rounded-md"
+        onPress={()=>router.push("/(usefull)/(edit)/editProfileData")}
+        >
           <Text className="text-primary dark:text-primaryDark">
             Edit Profile
           </Text>

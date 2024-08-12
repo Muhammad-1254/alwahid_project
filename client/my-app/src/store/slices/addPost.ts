@@ -24,8 +24,6 @@ type NewPostProps = {
   modalResponseData:
     | TGetSimilarHashtagByNameResponse
     | GetSimilarFriendsZoneByNameResponse;
-  uploadLoading: boolean;
-  uploadProgress: number;
   uploadError: string;
 };
 
@@ -33,8 +31,6 @@ const initialState: NewPostProps = {
   text: "",
   postMedias: [],
   modalResponseData: [],
-  uploadLoading: false,
-  uploadProgress: 0,
   uploadError: "",
 };
 
@@ -52,12 +48,7 @@ const newPostSlice = createSlice({
     setModalResponseData: (state, action) => {
       state.modalResponseData = action.payload;
     },
-    setPostUploadLoading: (state, action: PayloadAction<boolean>) => {
-      state.uploadLoading = action.payload;
-    },
-    setPostUploadProgress: (state, action: PayloadAction<number>) => {
-      state.uploadProgress = action.payload;
-    },
+   
     setPostUploadError: (state, action: PayloadAction<string>) => {
       state.uploadError = action.payload;
     },
@@ -69,8 +60,6 @@ export const {
   setNewPostText,
   setModalResponseData,
   setPostUploadError,
-  setPostUploadLoading,
-  setPostUploadProgress,
 } = newPostSlice.actions;
 
 export default newPostSlice.reducer;
