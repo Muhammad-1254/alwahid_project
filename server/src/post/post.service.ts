@@ -11,7 +11,6 @@ import {
   CreatePostMediaDto,
   CreatePresignedUrlDto,
   CreateUserSavedPostDto,
-  DeletePostCommentLikeDto,
   UpdatePostCommentLikeDto,
 } from "./dto/create-post.dto";
 import {
@@ -53,7 +52,7 @@ export class PostService {
     user: JwtAuthGuardTrueType,
     createPresignedUrlDto: CreatePresignedUrlDto[],
   ) {
-    const s3Client = await this.getS3Client();
+    const s3Client = this.getS3Client();
     const presignedUrls = [];
     for (let i = 0; i < createPresignedUrlDto.length; i++) {
       const key = `post/${user.userId}/${new Date().getTime()}-${createPresignedUrlDto[i].fileName}`;
@@ -277,7 +276,6 @@ export class PostService {
       where: {
         commentId: createPostLike.commentId,
         userId: user.userId,
-        likeType: createPostLike.likeType,
       },
       select: ["id", "likeType"],
       loadEagerRelations: false,
@@ -293,7 +291,7 @@ export class PostService {
       targetType: PostLikeTargetEnum.COMMENT,
     });
     await this.entityManager.save(postCommentLike);
-    return { message: "like created successfully!", data: postCommentLike };
+    return { message: "like created successfully!",  };
   }
 
   async findUserPersonalPosts(
@@ -303,7 +301,7 @@ export class PostService {
   ) {
     const query = this.entityManager
       .createQueryBuilder(Post, "post")
-      .select(["post.id","post.createdAt"])
+      .select(["post.id", "post.createdAt"])
       .leftJoin("post.postMedias", "postMedias")
       .addSelect(["postMedias.url", "postMedias.mimeType", "postMedias.id"]);
     if (user.userRole === UserRoleEnum.ADMIN) {
@@ -312,19 +310,17 @@ export class PostService {
       query.where("post.creatorUserId = :userId", { userId: user.userId });
     }
 
-    query.orderBy('post.createdAt', "DESC");
+    query.orderBy("post.createdAt", "DESC");
     query.skip(skip).take(take);
     const posts = await query.getMany();
     console.log("posts: ", posts);
-    
+
     // checking if presigned url is expired or not
     for (let i = 0; i < posts.length; i++) {
       posts[i].postMedias = await this.getNewPostMediasUrlAfterExpiration(
         posts[i].postMedias,
       );
     }
-
-  
 
     // TODO: check if presigned url is working or not
     for (let i = 0; i < posts.length; i++) {
@@ -343,10 +339,9 @@ export class PostService {
         }
       }
 
-      return posts
+      return posts;
     }
   }
-
 
   async findUserPersonalLikedPosts(
     user: JwtAuthGuardTrueType,
@@ -375,8 +370,8 @@ export class PostService {
         likedPosts[i].postMedias,
       );
     }
-    
-    return likedPosts
+
+    return likedPosts;
   }
 
   async findUserPersonalSavedPosts(
@@ -386,7 +381,7 @@ export class PostService {
   ) {
     const savedPosts = await this.entityManager
       .createQueryBuilder(Post, "post")
-      .select(["post.id",  "post.createdAt"])
+      .select(["post.id", "post.createdAt"])
       .leftJoin("post.postMedias", "postMedias")
       .addSelect(["postMedias.url", "postMedias.mimeType", "postMedias.id"])
 
@@ -406,9 +401,8 @@ export class PostService {
         savedPosts[i].postMedias,
       );
     }
-  
 
-    return savedPosts
+    return savedPosts;
   }
 
   async findAllPosts(from: number, to: number) {
@@ -472,255 +466,160 @@ export class PostService {
     return { data: postComments };
   }
 
-  async findAllPostLikes(postId: string, from: number, to: number) {
-    const postLikes: postCommentLikesResponseDataType[] = [];
+  async findAllPostLikes(user:JwtAuthGuardTrueType, postId: string,isLatest:boolean, skip: number, take: number) {
 
-    await this.entityManager.transaction(async entityManager => {
-      const post = await entityManager.findOne(Post, {
-        where: {
-          id: postId,
-        },
-        select: ["id"],
-      });
-      if (!post) {
-        throw new NotFoundException("Post not found!");
-      }
-      const [likes]: [PostCommentLike[], number] =
-        await entityManager.findAndCount(PostCommentLike, {
-          where: { postId },
-          skip: from,
-          take: to,
-        });
-      // finding the relevant user belongs to the comment
+    const query = this.entityManager
+    .createQueryBuilder(PostCommentLike, "likes")
+    .select(["likes.id", "likes.likeType", "likes.createdAt"])
+    .leftJoin("likes.user", "user")
+    .addSelect(['user.id', 'user.firstname', 'user.lastname', 'user.avatarUrl', 'user.userRoles', 'user.isSpecialUser','user.isActive' ])
+    .where('likes.postId = :postId', { postId })
+    .andWhere('likes.targetType = :targetType', { targetType: PostLikeTargetEnum.POST })
+    .orderBy('likes.createdAt', isLatest ? 'DESC' : 'ASC')
+    .skip(skip)
+    .take(take)
+    const likes = await query.getMany();
 
-      likes.forEach(async like => {
-        const user = await entityManager.findOne(User, {
-          where: { id: like.userId },
-          select: [
-            "id",
-            "firstname",
-            "lastname",
-            "avatarUrl",
-            "userRoles",
-            "isSpecialUser",
-            "isVerified",
-          ],
-        });
-        postLikes.push({
-          userId: user.id,
-          firstname: user.firstname,
-          lastname: user.lastname,
-          avatarUrl: user.avatarUrl,
-          userRoles: user.userRoles,
-          isSpecialUser: user.isSpecialUser,
-          isVerified: user.isVerified,
-          likeId: like.id,
-          likeType: like.likeType,
-          createdAt: like.createdAt,
-        });
-      });
-    });
-    return { data: postLikes };
+    return likes 
+    
+      
   }
-  async findAllCommentLikes(commentId: string, from: number, to: number) {
-    const commentLikes: postCommentLikesResponseDataType[] = [];
+  async findAllCommentLikes(user:JwtAuthGuardTrueType, commentId: string,isLatest:boolean, skip: number, take: number) {
+    const query = this.entityManager
+    .createQueryBuilder(PostCommentLike, "likes")
+    .select(["likes.id", "likes.likeType", "likes.createdAt"])
+    .leftJoin("likes.user", "user")
+    .addSelect(['user.id', 'user.firstname', 'user.lastname', 'user.avatarUrl', 'user.userRoles', 'user.isSpecialUser','user.isActive' ])
+    .where('likes.commentId = :commentId', { commentId})
+    .andWhere('likes.targetType = :targetType', {  targetType: PostLikeTargetEnum.COMMENT })
+    .orderBy('likes.createdAt', isLatest ? 'DESC' : 'ASC')
+    .skip(skip)
+    .take(take)
+    const likes = await query.getMany();
 
-    await this.entityManager.transaction(async entityManager => {
-      const comment = await entityManager.findOne(PostComments, {
-        where: {
-          id: commentId,
-        },
-      });
-      if (!comment) {
-        throw new NotFoundException("Comment not found!");
-      }
-      const [likes]: [PostCommentLike[], number] =
-        await entityManager.findAndCount(PostCommentLike, {
-          where: { commentId },
-          skip: from,
-          take: to,
-        });
-      // finding the relevant user belongs to the comment
-      likes.forEach(async like => {
-        const user = await entityManager.findOne(User, {
-          where: { id: like.userId },
-          select: [
-            "id",
-            "firstname",
-            "lastname",
-            "avatarUrl",
-            "userRoles",
-            "isSpecialUser",
-            "isVerified",
-          ],
-        });
-        commentLikes.push({
-          userId: user.id,
-          firstname: user.firstname,
-          lastname: user.lastname,
-          avatarUrl: user.avatarUrl,
-          userRoles: user.userRoles,
-          isSpecialUser: user.isSpecialUser,
-          isVerified: user.isVerified,
-          likeId: like.id,
-          likeType: like.likeType,
-          createdAt: like.createdAt,
-        });
-      });
-    });
-    return { data: commentLikes };
+    return likes 
   }
 
   async findOnePost(postId: string, userId: string) {
-    const query = await this.entityManager
+    const query = this.entityManager
       .createQueryBuilder(Post, "post")
       .select(["post.id", "post.textContent", "post.createdAt", "post.postBy"])
-      .groupBy("post.id")
-      .addGroupBy("post.textContent")
-      .addGroupBy("post.createdAt")
-      .addGroupBy("post.postBy")
+      .leftJoinAndSelect("post.postMedias", "postMedias")
 
-      // getting post likes count
-      .leftJoin("post.postLikes", "postLikesCount")
-      .addSelect("COUNT(postLikesCount.id)", "likesCount")
-
-      // getting latest like type
-      .leftJoin("post.postLikes", "lastLike")
-      .addSelect("lastLike.likeType")
-      .addGroupBy("lastLike.likeType")
-      .addGroupBy("lastLike.createdAt")
-      .addOrderBy("lastLike.createdAt", "DESC")
-      .limit(1)
-
-      // getting latest like user name
-      .leftJoin("lastLike.user", "lastLikeUser")
-      .addSelect(["lastLikeUser.firstname", "lastLikeUser.lastname"])
-      .addGroupBy("lastLikeUser.id")
-      .addGroupBy("lastLikeUser.firstname")
-      .addGroupBy("lastLikeUser.lastname")
-      .addOrderBy("lastLike.createdAt", "DESC")
-      .limit(1)
-
-      // getting post comments count
-      .leftJoin("post.postComments", "postCommentsCount")
-      .addSelect("COUNT(postCommentsCount.id)", "commentsCount")
-
-      // getting latest comment content
-      .leftJoin("post.postComments", "lastComment")
-      .addSelect(["lastComment.content", "lastComment.createdAt"])
-      .addGroupBy("lastComment.content")
-      .addGroupBy("lastComment.createdAt")
-      .addOrderBy("lastComment.createdAt", "DESC")
-      .limit(1)
-
-      // getting latest comment user name
-      .leftJoin("lastComment.user", "lastCommentUser")
-      .addSelect(["lastCommentUser.firstname", "lastCommentUser.lastname"])
-      .addGroupBy("lastCommentUser.id")
-      .addGroupBy("lastCommentUser.firstname")
-      .addGroupBy("lastCommentUser.lastname")
-      .addOrderBy("lastComment.createdAt", "DESC")
-      .limit(1)
-
-      // checking if fetch user like this post or not
-      .leftJoin("post.postLikes", "userLike", "userLike.userId = :userId", {
-        userId,
-      })
-      .addSelect("userLike.likeType", "isCurrentUserLiked")
-      .addGroupBy("userLike.likeType")
-
-      // checking if user saved this post or not
-      .leftJoin(
-        "post.savedByUsers",
-        "userSaved",
-        "userSaved.userId = :userId",
-        { userId },
-      )
-      .addSelect("userSaved.userId", "isCurrentUserSaved")
-      .addGroupBy("userSaved.userId")
-
-      // checking if user have comments on this post or not
-      .leftJoin(
-        "post.postComments",
-        "userComment",
-        "userComment.userId = :userId",
-        { userId },
-      )
-      .addSelect(["userComment.content", "userComment.createdAt"])
-      .addGroupBy("userComment.content")
-      .addGroupBy("userComment.createdAt")
-
-      // checking if user comment like counts this
-      .leftJoin("userComment.commentLikes", "commentLikesCount")
-      .addSelect("COUNT(commentLikesCount.id)", "commentLikesCount")
-      .addGroupBy("commentLikesCount.id")
-      // type
-      .addSelect("commentLikesCount.likeType")
-      .addGroupBy("commentLikesCount.likeType")
-
-      // getting creator user details
+      // if creator user
       .leftJoin("post.creatorUser", "cu")
       .leftJoin("cu.user", "creatorUser")
       .addSelect([
+        "creatorUser.id",
         "creatorUser.firstname",
         "creatorUser.lastname",
         "creatorUser.avatarUrl",
       ])
-      .addGroupBy("creatorUser.id")
-      .addGroupBy("creatorUser.firstname")
-      .addGroupBy("creatorUser.lastname")
-      .addGroupBy("creatorUser.avatarUrl")
 
-      // getting admin user details
+      // if admin user
       .leftJoin("post.adminUser", "au")
       .leftJoin("au.user", "adminUser")
       .addSelect([
+        "adminUser.id",
         "adminUser.firstname",
         "adminUser.lastname",
         "adminUser.avatarUrl",
       ])
-      .addGroupBy("adminUser.id")
-      .addGroupBy("adminUser.firstname")
-      .addGroupBy("adminUser.lastname")
-      .addGroupBy("adminUser.avatarUrl");
 
-    const postData = await query
+      // total likes count
+      .addSelect(subQuery => {
+        return subQuery
+          .select("COUNT(likes.id)", "totalLikes")
+          .from(PostCommentLike, "likes")
+          .where("likes.postId = post.id");
+      }, "totalLikes")
+
+      // total comments count
+      .addSelect(subQuery => {
+        return subQuery
+          .select("COUNT(comments.id)", "totalComments")
+          .from(PostComments, "comments")
+          .where("comments.postId = post.id");
+      }, "totalComments")
+
+      // is fetch user like this post
+      .addSelect(subQuery => {
+        return subQuery
+          .select("COUNT(userLike.id) > 0", "userLiked")
+          .from(PostCommentLike, "userLike")
+          .where("userLike.postId = post.id")
+          .andWhere("userLike.userId = :userId", { userId })
+          .andWhere("userLike.targetType = :targetType", {
+            targetType: PostLikeTargetEnum.POST,
+          });
+      }, "userLiked")
+
+      // fetch user like type
+      .addSelect(subQuery => {
+        return subQuery
+          .select('userliketype."likeType"', "userLikedType")
+          .from(PostCommentLike, "userliketype")
+          .where('userliketype."postId" = post.id')
+          .andWhere('userliketype."userId" = :userid', { userid: userId })
+          .andWhere('userliketype."targetType" = :targett', {
+            targett: PostLikeTargetEnum.POST,
+          })
+          .addGroupBy('userliketype."likeType"');
+      }, "userLikedType")
+
+      // is fetch user save this post
+      .addSelect(subQuery => {
+        return subQuery
+          .select("COUNT(usersave) > 0", "userSaved")
+          .from(UserSavedPostsAssociation, "usersave")
+          .where('usersave."postId" = post.id')
+          .andWhere('usersave."userId" = :userid', { userid: userId });
+      }, "userSaved")
       .where("post.id = :postId", { postId })
-      .getRawOne();
-    const tempObject = prefixSplitNestingObject(postData);
-    if (tempObject.creatorUser.firstname && tempObject.creatorUser.firstname) {
-      delete tempObject.adminUser;
-      tempObject["user"] = tempObject.creatorUser;
-      delete tempObject.creatorUser;
+      .groupBy("post.id")
+      .addGroupBy("post.textContent")
+      .addGroupBy("post.createdAt")
+      .addGroupBy("post.postBy")
+      .addGroupBy("postMedias.id")
+      .addGroupBy("creatorUser.id")
+      .addGroupBy("adminUser.id");
+
+    const postData = await query.getRawMany();
+
+    const mostPostLikeTypes = await this.entityManager
+      .createQueryBuilder(PostCommentLike, "postLikes")
+      .select("postLikes.likeType", "likeType")
+      .addSelect("COUNT(postLikes.id)", "count")
+      .where("postLikes.postId = :postId", { postId })
+      .groupBy("postLikes.likeType")
+      .getRawMany();
+
+    const orderedData = prefixSplitNestingObject(postData, ["postMedias"]);
+    let postBy: object;
+    if (orderedData.creatorUser.id) {
+      postBy = { ...orderedData.creatorUser };
     } else {
-      delete tempObject.creatorUser;
-      tempObject["user"] = tempObject.adminUser;
-      delete tempObject.adminUser;
+      postBy = { ...orderedData.adminUser };
     }
-    const postMedias = await this.entityManager.find(PostMedia, {
-      where: { postId },
-      loadEagerRelations: false,
-      select: ["id", "mimeType", "url"],
-    });
-    // TODO: check if media url is expires or not
-    for (let i = 0; i < postMedias.length; i++) {
-      const isWorking = await this.checkIfMediaUrlWorksOrNor(postMedias[i].url);
-      if (!isWorking) {
-        // create new url
-        const url = await this.generatePresignedUrl(
-          this.getKeyFromPresignedUrl(postMedias[i].url),
-          await this.getS3Client(),
-          60 * 60 * 24 * 7, // 7 days
-        );
-        postMedias[i].url = url;
-      }
-    }
-    // update on db
-    await this.entityManager.save(postMedias);
-
-    const post = { ...tempObject, postMedias };
-
-    return post;
+    const data = {
+        postMedias: orderedData.postMedias,
+        createdAt: orderedData.post.createdAt,
+        postId: orderedData.post.id,
+        textContent: orderedData.post.textContent,
+        user: {
+          ...postBy,
+          userRole: orderedData.post.postBy,
+          isPostSaved: orderedData.userSaved,
+          isPostLiked: orderedData.userLiked,
+          postLikeType: orderedData.userLikedType,
+        },
+        interactions: {
+          totalLikes: orderedData.totalLikes,
+          totalComments: orderedData.totalComments,
+          mostLikeTypes: mostPostLikeTypes,
+        },
+    };
+    return data;
   }
   async getAllComments(
     user: JwtAuthGuardTrueType,
@@ -762,7 +661,7 @@ export class PostService {
       .groupBy("commentLikes.commentId")
       .addGroupBy("commentLikes.likeType")
       .getRawMany();
-
+    console.log("commentLikes", commentLikes);
     // Fetch current user's likes
     const currentUserLikes = await this.entityManager
       .createQueryBuilder(PostCommentLike, "userLike")
@@ -802,12 +701,28 @@ export class PostService {
         select: ["id", "textContent"],
       });
       if (!post) {
-        throw new NotFoundException("Post not found!");
+return
       }
       post.textContent = updatePost.content;
       await this.entityManager.save(post);
     });
     return { message: "post updated successfully!" };
+  }
+
+  async updatePostLike(user:JwtAuthGuardTrueType, updateLike: CreatePostLikeDto){
+    const like = await this.entityManager.findOne(PostCommentLike, {
+      where:{
+        postId: updateLike.postId,
+        userId: user.userId,
+        targetType: PostLikeTargetEnum.POST,
+      }
+    })
+    if(!like){
+      return
+    }
+    like.likeType = updateLike.likeType;
+    await this.entityManager.save(like);
+    return { message: "like updated successfully!" };
   }
   async updatePostCommentContent(updateComment: updatePostCommentContentDto) {
     await this.entityManager.transaction(async entityManager => {
@@ -829,14 +744,15 @@ export class PostService {
       where: {
         userId: user.userId,
         commentId: updateCommentLike.commentId,
+        targetType: PostLikeTargetEnum.COMMENT,
       },
     });
     if (!commentLike) {
-      throw new NotFoundException("comment like not found!");
+      return
     }
     commentLike.likeType = updateCommentLike.likeType;
     await this.entityManager.save(commentLike);
-    return { message: "comment like updated successfully!", data: commentLike };
+    return { message: "comment like updated successfully!", };
   }
 
   async removePost(id: string) {
@@ -853,27 +769,37 @@ export class PostService {
     await this.entityManager.delete(PostComments, { id });
     return { message: "Comment deleted successfully!" };
   }
-  async removePostOrCommentLike(id: string) {
-    await this.entityManager.delete(PostCommentLike, { id });
-    return { message: "Like deleted successfully!" };
+  async removePostLike(user:JwtAuthGuardTrueType,postId:string){
+    await this.entityManager.delete(PostCommentLike, {
+      postId,
+      userId: user.userId,
+      targetType: PostLikeTargetEnum.POST,
+    });
+    return { message: "Post like deleted successfully!" };
   }
-  async deletePostCommentLike(
+  async removeUserSavePost(user: JwtAuthGuardTrueType, postId: string) {
+    await this.entityManager.delete(UserSavedPostsAssociation, {
+      userId: user.userId,
+      postId,
+    })
+    return { message: "Post unsaved successfully!" };
+  }
+  async removePostCommentLike(
     user: JwtAuthGuardTrueType,
-    deleteLike: DeletePostCommentLikeDto,
+    commentId: string,
   ) {
     const commentLike = await this.entityManager.findOne(PostCommentLike, {
       where: {
         userId: user.userId,
-        commentId: deleteLike.commentId,
+        commentId,
+        targetType: PostLikeTargetEnum.COMMENT,
       },
     });
-    if (!commentLike) {
-      throw new NotFoundException("comment like not found!");
-    }
-    await this.entityManager.delete(PostCommentLike, { id: commentLike.id });
+    if(!commentLike)return // TODO: Handle this
+    await this.entityManager.delete(PostCommentLike,{userId: user.userId, commentId, targetType: PostLikeTargetEnum.COMMENT});
     return { message: "comment like deleted successfully!" };
   }
-  async getS3Client() {
+   getS3Client() {
     const s3Client = new S3Client({
       region: this.configService.get("AWS_S3_REGION"),
       credentials: {

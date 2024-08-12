@@ -9,7 +9,7 @@ import { User } from "./entities/user.entity";
 import { InjectRepository } from "@nestjs/typeorm";
 import { CreatorUser } from "./entities/user-creator.entity";
 import { v4 as uuid } from "uuid";
-import { UpdateUserDto } from "./dto/update-user.dto";
+import { UpdateUserBasicData, } from "./dto/update-user.dto";
 import { Location } from "src/location/entities/location.entity";
 import { JwtAuthGuardTrueType, UserRoleEnum } from "src/lib/types/user";
 import { AdminUser } from "./entities/user-admin.entity";
@@ -123,8 +123,18 @@ export class UserService {
 
       .where("user.id = :id", { id: user.userId })
       .getRawOne();
-    const data = prefixSplitNestingObject(profileData);
-    return {...data,user:{...data.user,userRole:user.userRole}};
+    const temp = prefixSplitNestingObject(profileData);
+      const data = {
+        ...temp.user,
+        userId: temp.user.id,
+        userRole: user.userRole,
+        followingCount: temp.followingCount,
+        followersCount: temp.followersCount,
+
+      }
+      delete data.id
+      
+    return data
   }
   async getUserProfileComplete(user: JwtAuthGuardTrueType) {
     let query = await this.entityManager
@@ -344,14 +354,57 @@ export class UserService {
       .getRawMany();
     return userFollowers;
   }
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  async getProfileAvatarUploadPresignedUrl(user:JwtAuthGuardTrueType, imageProps:{filename:string, fileSize:number, mimeType:string}){
+    if(!imageProps.mimeType.includes("image"))return
+    const s3Client= this.postService.getS3Client()
+    const key = `users/profile_avatar/${user.userId}_${new Date().getTime()}_${imageProps.filename}`
+    const command = new PutObjectCommand({
+      Bucket: this.configService.getOrThrow("AWS_S3_BUCKET_NAME"),
+      Key: key,
+      ContentType: imageProps.mimeType,
+    })
+    const url = await getSignedUrl(s3Client, command, {expiresIn:300})
+    return {url, urlKey:key}
+  }
+  async updateProfileAvatar(user:JwtAuthGuardTrueType,imageProps:{key:string}) {
+    if(!imageProps.key)return
+    
+    const s3Client = this.postService.getS3Client()
+    const expiresIn =Number.parseInt(this.configService.getOrThrow("AWS_S3_URL_EXPIRY"))
+    const url = await this.postService.generatePresignedUrl(
+      imageProps.key,
+      s3Client,
+      expiresIn
+    )
+    const foundUser = await this.entityManager.findOne(User,
+      {where:{
+        id:user.userId,
+      },
+      loadEagerRelations:false
+    })
+    if(!foundUser) return;
+    foundUser.avatarUrl = url
+    await this.userRepository.update(foundUser.id,foundUser)
+    return {url,message:"profile updated successfully!"}
   }
 
   remove(id: number) {
     return `This action removes a #${id} user`;
   }
 
+  async updateUserBasicData (user:JwtAuthGuardTrueType, updateUser:UpdateUserBasicData){
+    const foundUser = await this.userRepository.findOne({where:{id:user.userId}})
+    if(!foundUser) throw new NotFoundException("User not Found")
+    foundUser.firstname = updateUser.firstname || foundUser.firstname
+    foundUser.lastname = updateUser.lastname || foundUser.lastname
+    foundUser.phoneNumber = updateUser.phoneNumber || foundUser.phoneNumber
+    foundUser.dateOfBirth = updateUser.dateOfBirth || foundUser.dateOfBirth
+
+    
+    console.log(foundUser);
+    await this.userRepository.update(foundUser.id, foundUser)
+    return {message:'user updated successfully'}
+  }
   async unFollowToAnotherUser(userId: string, followingId: string) {
     await this.entityManager.delete(UserFollowingAssociation, {
       userId,

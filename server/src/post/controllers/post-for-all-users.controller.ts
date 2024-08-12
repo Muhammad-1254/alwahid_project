@@ -23,7 +23,6 @@ import {
   CreatePostCommentLikeDto,
   CreatePostLikeDto,
   CreateUserSavedPostDto,
-  DeletePostCommentLikeDto,
   UpdatePostCommentLikeDto,
 } from "../dto/create-post.dto";
 import { updatePostCommentContentDto } from "../dto/update-post.dto";
@@ -99,25 +98,31 @@ export class PostForAllUsersController {
     );
   }
 
-  @Get("post/likes")
+  @Get("post/likes/all/:postId")
   findAllPostLikes(
-    @Query("postId") postId: string,
-    @Query("from") from: number,
-    @Query("to") to: number,
+    @Request() req,
+    @Param("postId",ParseUUIDPipe) postId: string,
+    @Query("isLatest", ParseBoolPipe) isLatest: boolean,
+    @Query("skip", ParseIntPipe) skip: number,
+    @Query("take",ParseIntPipe) take: number,
   ) {
-    return this.postService.findAllPostLikes(postId, from, to);
+    return this.postService.findAllPostLikes(req.user,postId,isLatest, skip, take);
   }
 
-  @Get("comments/likes")
+  @Get("post/comment/likes/all/:commentId")
   findAllCommentLikes(
-    @Query("commentId") commentId: string,
-    @Query("isLatest") isLatest: boolean,
-    @Query("from") from: number,
-    @Query("to") to: number,
+    @Request() req,
+    @Param("commentId",ParseUUIDPipe) commentId: string,
+    @Query("isLatest", ParseBoolPipe) isLatest: boolean,
+    @Query("skip", ParseIntPipe) skip: number,
+    @Query("take",ParseIntPipe) take: number,
   ) {
-    return this.postService.findAllCommentLikes(commentId, from, to);
+    return this.postService.findAllCommentLikes(req.user, commentId,isLatest, skip, take);
   }
-
+  @Patch("post/like")
+  updatePostLike(@Request() req, @Body() updateLike: CreatePostLikeDto) {
+    return this.postService.updatePostLike(req.user,updateLike);
+  }
   @Patch("post/comment")
   updatePostCommentContent(@Body() updateComment: updatePostCommentContentDto) {
     return this.postService.updatePostCommentContent(updateComment);
@@ -134,15 +139,19 @@ export class PostForAllUsersController {
   removePostComment(@Param("id") id: string) {
     return this.postService.removePostComment(id);
   }
-  @Delete("post/like/:id")
-  removePostOrCommentLike(@Param("id") id: string) {
-    return this.postService.removePostOrCommentLike(id);
+  @Delete("post/like/:postId")
+  removePostLike( @Request() req,@Param("postId", ParseUUIDPipe) postId: string) {
+    return this.postService.removePostLike(req.user, postId);
   }
-  @Delete("post/comment/like")
-  deletePostCommentLike(
+  @Delete("post/save/:postId")
+  removeUserSavePost(@Request() req, @Param("postId", ParseUUIDPipe) postId: string) {
+    return this.postService.removeUserSavePost(req.user, postId);
+  }
+  @Delete("post/comment/like/:commentId")
+  removePostCommentLike(
     @Request() req,
-    @Body() deleteLike: DeletePostCommentLikeDto,
+    @Param("commentId", ParseUUIDPipe) commentId: string,
   ) {
-    this.postService.deletePostCommentLike(req.user, deleteLike);
+    this.postService.removePostCommentLike(req.user,commentId );
   }
 }

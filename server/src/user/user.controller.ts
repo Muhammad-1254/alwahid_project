@@ -16,7 +16,7 @@ import {
   CreateProfilePresignedUrlDto,
   createUserLocationDTO,
 } from "./dto/create-user.dto";
-import { UpdateUserDto } from "./dto/update-user.dto";
+import { UpdateUserBasicData, } from "./dto/update-user.dto";
 import { UserRoleEnum } from "src/lib/types/user";
 import { JwtAccessTokenGuard } from "src/auth/guards/jwt-access-token.guard";
 
@@ -99,11 +99,32 @@ export class UserController {
     return this.userService.updatedProfileAvatar(req.user.userId,createPresignedUrl);
   }
   
-
-  @Patch(":id")
-  update(@Param("id") id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.userService.update(+id, updateUserDto);
+  // TODO: add aws separate service to handle this
+  @UseGuards(JwtAccessTokenGuard)
+  @Post("profile/avatar/presigned-url")
+  getProfileAvatarUploadPresignedUrl(
+    @Request()req,
+  @Body() fileProps:{filename:string, fileSize:number, mimeType:string}
+  ){
+    return this.userService.getProfileAvatarUploadPresignedUrl(req.user,fileProps)
   }
+  @UseGuards(JwtAccessTokenGuard)
+  @Patch("profile/avatar")
+  updateProfileAvatar(
+    @Request() req,
+    @Body() imageProps:{key:string}
+  ) {
+    return this.userService.updateProfileAvatar(req.user,imageProps);
+  }
+  @UseGuards(JwtAccessTokenGuard)
+  @Patch("profile/basic")
+  updateUserBasicData(
+    @Request() req,
+    @Body()  updateUser :UpdateUserBasicData
+  ) {
+    return this.userService.updateUserBasicData(req.user,updateUser);
+  }
+
 
 
 

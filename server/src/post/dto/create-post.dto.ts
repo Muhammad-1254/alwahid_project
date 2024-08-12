@@ -86,5 +86,5 @@ export class UpdatePostCommentLikeDto extends CreatePostCommentLikeDto {}
 export class DeletePostCommentLikeDto {
   @IsNotEmpty()
   @IsUUID("4")
-  commentId: string;
+  likeId: string;
 }
