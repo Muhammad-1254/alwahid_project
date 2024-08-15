@@ -10,6 +10,7 @@ import { JwtAccessTokenStrategy } from "./strategies/jwt-access-token.strategy";
 import { JwtRefreshTokenStrategy } from "./strategies/jwt-refresh-token.strategy";
 import { RolesGuard } from "./guards/roles.guard";
 import { PostService } from "src/post/post.service";
+import { AwsService } from "src/aws/aws.service";
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { PostService } from "src/post/post.service";
       verifyOptions: { ignoreExpiration: false },
     }),
   ],
-  providers: [AuthService, UserService, PostService, LocalStrategy, JwtAccessTokenStrategy,JwtRefreshTokenStrategy, RolesGuard,],
+  providers: [AuthService,AwsService, UserService, PostService, LocalStrategy, JwtAccessTokenStrategy,JwtRefreshTokenStrategy, RolesGuard,],
   controllers: [AuthController],
 })
 export class AuthModule {}

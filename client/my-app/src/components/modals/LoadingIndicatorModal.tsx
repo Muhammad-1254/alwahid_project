@@ -7,6 +7,7 @@ type LoadingIndicatorModalProps = {
   uploadProgress?: number;
   circleSize?: number;
   uploadLoading: boolean;
+  loadingHeader?:React.ReactElement
   cancelUploadHandler?: () => void;
 
 };
@@ -15,6 +16,7 @@ const LoadingIndicatorModal: FC<LoadingIndicatorModalProps> = ({
   uploadLoading,
   uploadProgress,
   circleSize,
+  loadingHeader
 }) => {
   const [btnDisable, setBtnDisable] = useState(false);
   return (
@@ -24,6 +26,7 @@ const LoadingIndicatorModal: FC<LoadingIndicatorModalProps> = ({
       animationType="none"
       showStatusBar={true}
     >
+      {loadingHeader}
       {
         uploadProgress?(
           <Progress.Circle

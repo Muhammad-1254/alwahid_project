@@ -1,5 +1,4 @@
 import { ParentEntity } from "src/database/Parent.entity";
-import { CityEnum, CountryEnum, ProvinceEnum } from "src/lib/types/location";
 import { CreatorUser } from "src/user/entities/user-creator.entity";
 import { User } from "src/user/entities/user.entity";
 import { Column, Entity,    JoinColumn,    OneToOne, PrimaryGeneratedColumn } from "typeorm";
@@ -10,19 +9,19 @@ export class Location extends ParentEntity<Location> {
     @PrimaryGeneratedColumn('uuid')
     id: string
 
-    @Column({type:'enum',enum:CountryEnum,})
-    country: CountryEnum
+    @Column({type:'varchar',})
+    country: string
 
-    @Column({type:'enum',enum:ProvinceEnum})
-    province: ProvinceEnum
+    @Column({type:"varchar",})
+    province: string
 
-    @Column({type:'enum',enum:CityEnum})
-    city: CityEnum
+    @Column({type:"varchar",})
+    city: string
 
-    @Column()
+    @Column({type:"varchar",nullable:true})
     zipCode:string
 
-    @Column()
+    @Column({type:"varchar",nullable:true})
     street:string
 
     @Column({nullable:true,type:'uuid'})

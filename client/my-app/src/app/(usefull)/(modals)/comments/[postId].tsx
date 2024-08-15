@@ -64,7 +64,7 @@ const pageInitialState = {
 };
 const CommentModal: FC<CommentModalProps> = () => {
   const { postId } = useLocalSearchParams();
-  const userId = useAppSelector((s) => s.auth.data.user.userId);
+  const userId = useAppSelector((s) => s.userInformation.userBasicInfo.userId);
 
   // for modal
   const [likeModalVisible, setLikeModalVisible] = useState(false);
@@ -375,6 +375,7 @@ const router = useRouter()
 const commentLikeScreenHandler = ()=>{
   router.push({
     pathname: `/(usefull)/(modals)/likes/[targetType,id]`,
+     // @ts-expect-error 
     params: { targetType: PostLikeTargetEnum.COMMENT, id: item.id },
 
   });

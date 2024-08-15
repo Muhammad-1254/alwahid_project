@@ -18,7 +18,7 @@ import React, {
 } from "react";
 import { useColorScheme } from "nativewind";
 import { useAppDispatch, useAppSelector } from "@/src/hooks/redux";
-import { setUser, setUserRole } from "@/src/store/slices/auth";
+import {  setUserRole } from "@/src/store/slices/auth";
 
 import { Stack, useRouter } from "expo-router";
 import { Image } from "react-native";
@@ -38,6 +38,7 @@ import { RefreshControl } from "react-native-gesture-handler";
 import { PaginationType } from "@/src/types/post";
 import ErrorHandler from "@/src/lib/ErrorHandler";
 import MediaViewModal, { MediaViewModalDataType } from "@/src/components/modals/MediaViewModal";
+import { setUserBasicInfo } from "@/src/store/slices/userInformation";
 
 type PostMediasProps = {
   id: string;
@@ -83,7 +84,7 @@ export default function Profile() {
   //profile image view 
   const [mediaModalVisible, setMediaModalVisible] = useState(false);
   const [mediaModalData, setMediaModalData] = useState<MediaViewModalDataType>();
-const profileImageUrl = useAppSelector(s=>s.auth.data.user.avatarUrl)
+const profileImageUrl = useAppSelector(s=>s.userInformation.userBasicInfo.avatarUrl)
 
   const [posts, setPosts] = useState<PostDataType[]>([]);
   const [savedPosts, setSavedPosts] = useState<PostDataType[]>([]);
@@ -104,7 +105,7 @@ const [postControl, setPostControl] = useState(postControlInitial)
     try {
       const res = await cAxios.get(`${apiRoutes.getUserProfileData}`);
       console.log("data from api: " ,res.data)
-      dispatch(setUser(res.data));
+      dispatch(setUserBasicInfo(res.data));
       dispatch(setUserRole(res.data.userRole));
     } catch (error) {
       console.log("error from fetching user profile data :", error);
@@ -368,7 +369,7 @@ const FlatListRenderItem: FC<FlatListRenderItemProps> = ({ item, type }) => {
       >
         <Image
           source={{
-            uri: item.postMedias[0].url,
+            uri: item.postMedias[0]?.url,
           }}
           className="w-full h-full object-cover bg-center"
         />
@@ -431,14 +432,15 @@ const ListFooterComponent: FC<ListFooterComponentProps> = ({ loading }) => {
   return null;
 };
 const UserProfileInfo = () => {
-  const { data, userRole } = useAppSelector((state) => state.auth);
+  const userRole  = useAppSelector((state) => state.auth.userRole);
+const user = useAppSelector(s=>s.userInformation.userBasicInfo)
   const router = useRouter();
   return (
     <View className="w-full  bg-background dark:bg-backgroundDark pb-5">
       <View className="flex-row  items-start justify-center mt-2">
         <View className=" w-[50%]">
           <Text className="text-primary dark:text-primaryDark text-base capitalize">
-            {data.user?.firstname}&nbsp;{data.user?.lastname}
+            {user?.firstname}&nbsp;{user?.lastname}
           </Text>
           <Text className="text-primary dark:text-primaryDark opacity-60">
             role: {userRole}
@@ -447,11 +449,11 @@ const UserProfileInfo = () => {
         <View className="w-[50%] flex-row items-center gap-x-8">
           <Text className="text-primary dark:text-primaryDark text-center">
             Followers{"\n"}
-            {data.user.followersCount}
+            {user.followersCount}
           </Text>
           <Text className="text-primary dark:text-primaryDark text-center">
             Following{"\n"}
-            {data.user.followingCount}
+            {user.followingCount}
           </Text>
         </View>
       </View>

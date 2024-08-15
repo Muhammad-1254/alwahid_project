@@ -2,7 +2,8 @@ import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import mixReducer from "./slices/mix";
 import authReducer from "./slices/auth";
 import postDataReducer from "./slices/postData";
-import NewPostReducer from "./slices/addPost";
+import newPostReducer from "./slices/addPost";
+import userInformationReducer from "./slices/userInformation";
 
 import chatScreenReducer from "./slices/chatScreenData";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -12,15 +13,15 @@ const rootReducer = combineReducers({
   mix: mixReducer,
   auth: authReducer,
   postDetail: postDataReducer,
-  newPost: NewPostReducer,
+  newPost: newPostReducer,
   chatScreen: chatScreenReducer,
+  userInformation: userInformationReducer,
 });
 
 const persistConfig = {
   key: "root",
   storage: AsyncStorage,
-  whitelist: [""],
-  blacklist: ["newPost","profileTab" ],
+  whitelist: ["userInformation"],
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

@@ -46,8 +46,8 @@ export default function RootLayout() {
     return null;
   }
   return (
-    <SafeAreaProvider>
-      <GestureHandlerRootView style={{ flex: 1 }}>
+    <SafeAreaProvider >
+      <GestureHandlerRootView style={{ flex: 1,backgroundColor:'black' }}>
         <BottomSheetModalProvider>
             <RootSiblingParent>
 

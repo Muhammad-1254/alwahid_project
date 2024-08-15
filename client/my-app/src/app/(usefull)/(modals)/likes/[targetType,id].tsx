@@ -162,7 +162,7 @@ const FlatListRenderItem: FC<FlatListRenderItemProps> = ({
   item,
   likeUserNavigatorHandler,
 }) => {
-  const userId = useAppSelector((s) => s.auth.data.user.userId);
+  const userId = useAppSelector((s) => s.userInformation.userBasicInfo.userId);
   return (
     <View className="w-full h-[72px]  flex-row items-center  px-3 ">
       {/*  if long press than navigate to user profile */}

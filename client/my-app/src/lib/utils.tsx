@@ -108,3 +108,40 @@ export const checkIsValidPhoneNumber = (phoneNumber: string) => {
   const requiredPN = pnList[0]+"-"+pnList[1]+pnList[2];
   return requiredPN;
 };
+
+
+type Diff<T extends object, U extends object> = {
+  [K in Exclude<keyof T, keyof U>]?: T[K];
+} & {
+  [K in Exclude<keyof U, keyof T>]?: U[K];
+} & {
+  [K in keyof T & keyof U]: T[K] extends object
+      ? U[K] extends object
+          ? Diff<T[K], U[K]>
+          : T[K] | U[K]
+      : T[K] extends U[K]
+      ? never
+      : T[K] | U[K];
+};
+
+export function findDifferenceBObjects<T extends object, U extends object>(obj1: T, obj2: U): Diff<T, U> {
+  const changes: Partial<Diff<T, U>> = {};
+
+  const keys = new Set([...Object.keys(obj1), ...Object.keys(obj2)]);
+
+  keys.forEach((key) => {
+      const value1 = obj1[key as keyof T];
+      const value2 = obj2[key as keyof U];
+
+      if (typeof value1 === 'object' && value1 !== null && typeof value2 === 'object' && value2 !== null) {
+          const nestedDiff = findDifferenceBObjects(value1, value2);
+          if (Object.keys(nestedDiff).length > 0) {
+              changes[key as keyof Diff<T, U>] = nestedDiff;
+          }
+      } else if (value1 !== value2) {
+          changes[key as keyof Diff<T, U>] = value2 !== undefined ? value2 : value1;
+      }
+  });
+
+  return changes as Diff<T, U>;
+}

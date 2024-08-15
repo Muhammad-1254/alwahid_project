@@ -28,6 +28,7 @@ import ErrorHandler from "@/src/lib/ErrorHandler";
 import { PostLikeEnum, PostLikeTargetEnum } from "@/src/types/post";
 import ChooseLikeTypeModal from "@/src/components/modals/ChooseLikeTypeModal";
 import MediaViewModal, { MediaViewModalDataType } from "@/src/components/modals/MediaViewModal";
+import moment from "moment";
 
 type PostUserType = {
   id: string;
@@ -68,7 +69,7 @@ export default function PostDetailsScreen() {
   const { postId } = useLocalSearchParams();
   const router = useRouter();
   const { colorScheme } = useColorScheme();
-  const userId = useAppSelector((s) => s.auth.data.user.userId);
+  const userId = useAppSelector((s) => s.userInformation.userBasicInfo.userId);
 
   async function getPost() {
     let api: string;
@@ -181,7 +182,7 @@ const PostUserComponent: FC<PostUserComponentProps> = ({
           {user.firstname}&nbsp;{user.lastname}
         </Text>
         <Text className=" text-gray-500 dark:text-gray-400 text-xs ">
-          {createdAt}
+          {moment(createdAt).fromNow()}
         </Text>
       </View>
     </View>
@@ -398,9 +399,9 @@ const PublicInteractions: FC<PublicInteractionsProps> = ({
 
   const likeScreenHandler = () => {
     router.push({
-      // @ts-ignore
       pathname: `/(usefull)/(modals)/likes/[targetType,id]`,
-      params: { targetType: PostLikeTargetEnum.POST, id: postId },
+     // @ts-expect-error 
+      params: {targetType: PostLikeTargetEnum.POST, id: postId },
 
     });
   };
@@ -679,7 +680,7 @@ resizeMode="center"
       <ChooseLikeTypeModal
       visible={chooseLikeModal}
       setVisible={setChooseLikeModal}
-      modalPosition={{ x: 20, y: height }}
+      modalPosition={{ x: 8, y: height-85 }}
       likeHandler={chooseLikeModalHandler}
       />
     </>

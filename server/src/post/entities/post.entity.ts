@@ -1,5 +1,4 @@
 import { ParentEntity } from "src/database/Parent.entity";
-import { PostUserTypeEnum } from "src/lib/types/post";
 import {  Column, Entity, JoinColumn,  ManyToMany,  ManyToOne, OneToMany } from "typeorm";
 import { PostMedia } from "./post-media.entity";
 import { CreatorUser } from "src/user/entities/user-creator.entity";
@@ -23,8 +22,7 @@ export class Post extends ParentEntity<Post> {
     textContent: string;
 
     
-    @Column({ type: "enum",enum: PostUserTypeEnum})
-    postBy: PostUserTypeEnum;
+   
 
     @OneToMany(()=>PostMedia,postMedia =>postMedia.post)
     postMedias:PostMedia[]

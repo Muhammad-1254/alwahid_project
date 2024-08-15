@@ -6,7 +6,7 @@ import { Colors } from "@/src/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppDispatch, useAppSelector } from "@/src/hooks/redux";
 import { Image } from "react-native";
-import { getImageAspectRatio } from "@/src/lib/utils";
+import { findDifferenceBObjects, getImageAspectRatio } from "@/src/lib/utils";
 import * as ImagePicker from "expo-image-picker";
 import cAxios from "@/src/lib/cAxios";
 import { apiRoutes } from "@/src/constants/apiRoutes";
@@ -14,11 +14,12 @@ import axios from "axios";
 import * as FileSystem from "expo-file-system";
 import ErrorHandler from "@/src/lib/ErrorHandler";
 import { Buffer } from "buffer";
-import { setUser, UserDataAuthProps } from "@/src/store/slices/auth";
 import LoadingIndicatorModal from "@/src/components/modals/LoadingIndicatorModal";
 import { TextInput } from "react-native";
 import Toast from "react-native-root-toast";
 import DatePicker from "@react-native-community/datetimepicker";
+import { UserRoleEnum } from "@/src/types/user";
+import { LocationProps, setUserBasicInfo, UserBasicInfoProps } from "@/src/store/slices/userInformation";
 
 export default function ProfileData() {
  
@@ -62,18 +63,21 @@ export default function ProfileData() {
 
       <ScrollView className="flex-1 bg-background dark:bg-backgroundDark ">
         <EditBasicInfo  />
+        <UserRoleInfo/>
       </ScrollView>
     
     </>
   );
 }
 
+
+/// basic info
 const EditBasicInfo = () => {
   const [loading, setLoading] = useState(false);
   
   const [ar, setAr] = useState("1/1");
   
-  const [userData, setUserData] = useState<UserDataAuthProps | null>(null);
+  const [userData, setUserData] = useState<UserBasicInfoProps | null>(null);
   
   const [isDataChanged, setIsDataChanged] = useState(false);
   const [dateModalVisible, setDateModalVisible] = useState(false);
@@ -81,23 +85,22 @@ const EditBasicInfo = () => {
   const [minimumDate, setMinimumDate] = useState<Date | null>(null);
   
 
-  const user = useAppSelector((s) => s.auth);
+  const user = useAppSelector((s) => s.userInformation.userBasicInfo);
   const { colorScheme } = useColorScheme();
   const dispatch = useAppDispatch();
-
   useEffect(() => {
-    if (user.data.user) {
-      setUserData(user.data.user);
+    if (user) {
+      setUserData(user);
     }
     async function getImageAr(url: string) {
       const data = await getImageAspectRatio(url);
       if (data && typeof data === "string") setAr(data);
     }
-    if (user.data.user.avatarUrl) getImageAr(user.data.user.avatarUrl);
+    if (user.avatarUrl) getImageAr(user.avatarUrl);
   }, [user]);
 
   useEffect(()=>{
-    if(userData &&JSON.stringify(userData)===JSON.stringify(user.data.user)){
+    if(userData &&JSON.stringify(userData)===JSON.stringify(user)){
     setIsDataChanged(false)
     }else{
       setIsDataChanged(true)
@@ -105,24 +108,30 @@ const EditBasicInfo = () => {
   },[userData])
 
   const confirmChangesHandler = async () => {
+    console.log("btn pressed");
     // first take out those fields which are changed 
-    const changedFields = Object.entries(userData!).filter(
-      // @ts-expect-error 
-      (item) => user.data.user[item[0]] !== item[1]
-    );
+    // const changedFields = Object.entries(userData!).filter(
+    //   // @ts-expect-error 
+    //   (item) => user[item[0]] !== item[1]
+    // );
     
-    if (changedFields.length === 0) return;
-    const body = changedFields.reduce((acc, [key, value]) => {
-      // @ts-expect-error 
-      acc[key] = value;
-      return acc;
-    }, {});
+    // if (changedFields.length === 0) return;
+    // const body = changedFields.reduce((acc, [key, value]) => {
+    //   // @ts-expect-error 
+    //   acc[key] = value;
+    //   return acc;
+    // }, {});
+  const body =  findDifferenceBObjects(user,userData!)
     console.log("body", body);
     try {
       setLoading(true)
-      const res = await cAxios.patch(apiRoutes.updateUserProfileBasicInfo, body)
+      const res = await cAxios.patch(apiRoutes.updateUserBasicInformation, body)
       if(res.status===200){
-        dispatch(setUser(body))
+        if(body.hasOwnProperty("location"))
+        dispatch(setUserBasicInfo({...body,location:{...user.location, ...body.location}}))
+        else
+        dispatch(setUserBasicInfo(body))
+
       }
     } catch (error) {
       console.log("error while updating user data", error);
@@ -189,7 +198,7 @@ const EditBasicInfo = () => {
       const updateRes = await cAxios.patch(apiRoutes.updateUserProfileAvatar, {
         key: urlKey,
       });
-      dispatch(setUser({ avatarUrl: updateRes.data.url }));
+      dispatch(setUserBasicInfo({ avatarUrl: updateRes.data.url }));
     } catch (error) {
       console.log("error while updating profile image", error);
       ErrorHandler.handle(error);
@@ -212,7 +221,7 @@ const EditBasicInfo = () => {
           <Text className="text-primary dark:text-primaryDark  mt-4 opacity-75">
             Profile Image:
           </Text>
-          {user.data.user.avatarUrl === null ? (
+          {user.avatarUrl === null ? (
             <Pressable
               className="w-1/2 aspect-square items-center justify-center rounded-2xl border border-muted dark:border-mutedDark"
               onPress={editImageBtnHandler}
@@ -235,7 +244,7 @@ const EditBasicInfo = () => {
             >
               <Image
                 source={{
-                  uri: user.data.user.avatarUrl,
+                  uri: user.avatarUrl,
                 }}
                 className="w-full h-full"
                 resizeMethod="resize"
@@ -273,15 +282,22 @@ const EditBasicInfo = () => {
           {
             // make array of user object
             userData &&
-              Object.entries(userData).map((item) => (
+              Object.entries(userData).map((item) =>item[0]==="location"? (
+                // @ts-ignore 
+                <LocationComponent key={item[0]} item={item} setUserData={setUserData} />
+               
+              ):(
+
                 <BasicInfoEditItem
-                  key={item[0]}
-                  item={item}
-                  setUserData={setUserData}
-                  userData={userData}
-                  setDateModalVisible={setDateModalVisible}
-                />
-              ))
+                key={item[0]}
+                // @ts-ignore 
+                item={item}
+                setUserData={setUserData}
+                userData={userData}
+                setDateModalVisible={setDateModalVisible}
+              />
+              )
+            )
           }
         </View>
       </View>
@@ -301,7 +317,7 @@ const EditBasicInfo = () => {
         isDataChanged && (
           <View className="w-full h-12 mt-4 flex-row items-center justify-evenly">
             <Pressable className="w-[40%] h-full items-center justify-center bg-destructive dark:bg-destructiveDark rounded-2xl"
-            onPress={()=>setUserData(user.data.user)}
+            onPress={()=>setUserData(user)}
             >
             <Text className="text-primary dark:text-primaryDark text-base">Cancel</Text>
           </Pressable>
@@ -320,9 +336,9 @@ const EditBasicInfo = () => {
 };
 
 type BasicInfoEditItemProps = {
-  item: [string, string | boolean];
-  setUserData: React.Dispatch<React.SetStateAction<UserDataAuthProps | null>>;
-  userData: UserDataAuthProps | null;
+  item: [string, string |boolean|null];
+  setUserData: React.Dispatch<React.SetStateAction<UserBasicInfoProps | null>>;
+  userData: UserBasicInfoProps | null;
   setDateModalVisible: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
@@ -335,6 +351,7 @@ const userDataEditableFields = {
 const userDataIgnoreFields = {
   avatarUrl: true,
   userId: true,
+  userRole:true,
 };
 const BasicInfoEditItem: FC<BasicInfoEditItemProps> = ({
   item,
@@ -349,7 +366,6 @@ const BasicInfoEditItem: FC<BasicInfoEditItemProps> = ({
     if (userDataEditableFields.hasOwnProperty(key)) {
       setShowInputField(true);
     } else {
-      console.log(value.toString());
       Toast.show("This field is not editable", {
         duration: Toast.durations.SHORT,
         position: Toast.positions.CENTER,
@@ -460,3 +476,123 @@ const BasicInfoEditItem: FC<BasicInfoEditItemProps> = ({
 
   );
 };
+
+
+/// basic info
+
+
+/// user role info
+
+
+const UserRoleInfo = ()=>{
+
+
+  const [loading, setLoading] =useState(false)
+  const userRole= useAppSelector(s=>s.auth.userRole)
+  
+  
+  if(userRole===UserRoleEnum.NORMAL){
+    return(
+      <>
+      <LoadingIndicatorModal uploadLoading={loading} />
+      <View className="px-2 mt-4">
+        <Text className="text-primary dark:text-primaryDark text-base">
+          Your Role in Application: User
+        </Text>
+        <View className="w-full flex-row items-start justify-between mt-2.5 ">
+          </View>
+          </View>
+      </>
+    
+    )
+  }
+
+  return(<>
+      <LoadingIndicatorModal uploadLoading={loading} />
+      <View className="px-2 mt-10">
+        <View className="flex-row items-center justify-between  ">
+        <Text className="text-primary dark:text-primaryDark text-base">
+          Your Role in Application:
+        </Text>
+        <Text className="text-primary dark:text-primaryDark text-base pr-2">
+          Creator
+        </Text>
+        </View>
+
+       
+          
+        </View>
+  </>)
+}
+
+
+
+
+
+type LocationComponentProps = {
+  item: [string,  LocationProps];
+  setUserData: React.Dispatch<React.SetStateAction<UserBasicInfoProps | null>>;
+}
+const LocationComponent:FC<LocationComponentProps> = ({item,setUserData})=>{
+  const [showInputField, setShowInputField] = useState(false);
+  
+  const [key, value] = item;
+ 
+  const getCorrectKeyForDisplay = (key:string)=>{
+    switch (key) {
+      case "country":
+        return "Country";
+      case "province":
+        return "Province";
+      case "city":
+        return "City";
+      case "zipCode":
+        return "Zip Code";
+      case "street":
+        return "Street Address"
+      default:
+        return key
+        }}
+  return(
+    <View className="mt-4 px-2">
+      <Text className="text-primary dark:text-primaryDark text-base text-center opacity-60">Location</Text>
+    {
+  Object.entries(value).map((lItem) => 
+    lItem[0]!=='id'&&
+    (
+    <Pressable
+    key={lItem[0]}
+      // onPress={fieldPressHandler}
+      className={`w-full  h-10 flex-row justify-between items-center px-1   border-b
+        ${
+          showInputField
+            ? "border-borderDark dark:border-border"
+            : "border-border dark:border-borderDark"
+        }
+
+        `}
+    >
+      <Text className="text-primary dark:text-primaryDark  opacity-80  ">{getCorrectKeyForDisplay(lItem[0])}</Text>
+      <View className="flex-1">
+            <TextInput
+              value={lItem[1]}
+              textAlign="right"
+              onChangeText={(text) =>
+                setUserData((prev) =>
+                  prev === null ? null : { ...prev, location:{...prev.location,[lItem[0]]: text} }
+                )
+              }
+              className="w-full h-full pl-2    text-primary dark:text-primaryDark "
+              autoFocus={showInputField}
+              onBlur={() => setShowInputField(false)}
+            />
+            </View>
+    
+    </Pressable>
+    ))
+    }
+
+    </View>
+  )
+}
+

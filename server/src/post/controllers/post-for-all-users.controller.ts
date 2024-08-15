@@ -135,6 +135,8 @@ export class PostForAllUsersController {
     this.postService.updatePostCommentLike(req.user, updateLike);
   }
 
+  
+
   @Delete("post/comment/:id")
   removePostComment(@Param("id") id: string) {
     return this.postService.removePostComment(id);

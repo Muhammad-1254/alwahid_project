@@ -1,7 +1,6 @@
 import {
   Injectable,
   NotFoundException,
-  UnsupportedMediaTypeException,
 } from "@nestjs/common";
 import {
   CreatePostCommentDto,
@@ -25,45 +24,35 @@ import { PostComments } from "./entities/post-comment.entity";
 import { User } from "src/user/entities/user.entity";
 import { JwtAuthGuardTrueType, UserRoleEnum } from "src/lib/types/user";
 import {
-  commentsResponseDataType,
-  postCommentLikesResponseDataType,
   PostLikeTargetEnum,
-  PostMediaEnum,
-  PostUserTypeEnum,
 } from "src/lib/types/post";
 import { PostCommentLike } from "./entities/post-comment-like.entity";
 import { ConfigService } from "@nestjs/config";
 
-import { S3Client } from "@aws-sdk/client-s3";
-import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { UserSavedPostsAssociation } from "src/user/entities/user-saved-post.entity";
 import { prefixSplitNestingObject } from "src/lib/utils";
-import axios from "axios";
+import { AwsService } from "src/aws/aws.service";
 
 @Injectable()
 export class PostService {
   constructor(
     private readonly entityManager: EntityManager,
     private readonly configService: ConfigService,
+    private readonly awsService: AwsService,
   ) {}
 
   async createPresignedUrl(
     user: JwtAuthGuardTrueType,
     createPresignedUrlDto: CreatePresignedUrlDto[],
   ) {
-    const s3Client = this.getS3Client();
     const presignedUrls = [];
     for (let i = 0; i < createPresignedUrlDto.length; i++) {
       const key = `post/${user.userId}/${new Date().getTime()}-${createPresignedUrlDto[i].fileName}`;
-      const command = new PutObjectCommand({
-        Bucket: this.configService.getOrThrow("AWS_S3_BUCKET_NAME"),
-        Key: key,
-        ContentType: createPresignedUrlDto[i].mimeType,
-      });
-      const url = await getSignedUrl(s3Client, command, {
-        expiresIn: 1200, // 20 minutes
-      });
+      const url = await this.awsService.generatePutPresignedUrl(
+        key,
+        createPresignedUrlDto[i].mimeType,
+        60 * 60 * 20, // 20 minutes
+      );
       presignedUrls.push({
         fileName: createPresignedUrlDto[i].fileName,
         key,
@@ -86,10 +75,6 @@ export class PostService {
       const post = new Post({
         id: postId,
         textContent: createPostDto.textContent,
-        postBy:
-          user.userRole === "creator"
-            ? PostUserTypeEnum.CREATOR
-            : PostUserTypeEnum.ADMIN,
         creatorUserId: user.userRole === "creator" ? user.userId : null,
         adminUserId: user.userRole === "admin" ? user.userId : null,
       });
@@ -97,16 +82,11 @@ export class PostService {
       // the media.urlKey have key we have to make the url from aws presigned method then add into db
       const postMediaList: PostMedia[] = [];
       for (let i = 0; i < createPostDto.postMedias.length; i++) {
-        const url = await this.generatePresignedUrl(
-          createPostDto.postMedias[i].urlKey,
-          await this.getS3Client(),
-          Number.parseInt(this.configService.getOrThrow("AWS_S3_URL_EXPIRY")),
-        );
         const postMedia = new PostMedia({
           id: uuid(),
           postId: postId,
           mimeType: createPostDto.postMedias[i].mimeType,
-          url,
+          url: createPostDto.postMedias[i].urlKey,
         });
         postMediaList.push(postMedia);
       }
@@ -147,33 +127,33 @@ export class PostService {
     return { message: "Post created successfully!" };
   }
   async createPostMedia(createMedia: CreatePostMediaDto) {
-    const postMedia: PostMedia[] = [];
-    await this.entityManager.transaction(async entityManager => {
-      // first check if post is exist or not
-      const post = await entityManager.findOne(Post, {
-        where: { id: createMedia.postId },
-        select: ["id"],
-      });
-      if (!post) {
-        throw new NotFoundException("Post not found!");
-      }
-      createMedia.postMedias.forEach(media => {
-        if (
-          media.mimeType !== PostMediaEnum.IMAGE &&
-          media.mimeType !== PostMediaEnum.VIDEO
-        ) {
-          throw new UnsupportedMediaTypeException("Invalid media type!");
-        }
-        const postMedia_ = new PostMedia({
-          ...media,
-          id: uuid(),
-          postId: createMedia.postId,
-        });
-        postMedia.push(postMedia_);
-        this.entityManager.save(postMedia_);
-      });
+    const postMediasList: PostMedia[] = [];
+    // first check if post is exist or not
+    const post = await this.entityManager.findOne(Post, {
+      where: { id: createMedia.postId },
+      select: ["id"],
+      loadEagerRelations: false,
     });
-    return { message: "media created successfully!", data: postMedia };
+    if (!post) {
+      throw new NotFoundException("Post not found!");
+    }
+    for (let i = 0; i < createMedia.postMedias.length; i++) {
+      const postMedia = new PostMedia({
+        mimeType: createMedia.postMedias[i].mimeType,
+        url: createMedia.postMedias[i].urlKey,
+        id: uuid(),
+        postId: createMedia.postId,
+      });
+      postMediasList.push(postMedia);
+    }
+
+    this.entityManager.save(postMediasList);
+    const data = postMediasList.map(media => ({
+      url: this.awsService.getCloudFrontSignedUrl(media.url),
+      mimeType: media.mimeType,
+      id: media.id,
+    }));
+    return { message: "media created successfully!", data };
   }
 
   async createPostComment(
@@ -291,7 +271,7 @@ export class PostService {
       targetType: PostLikeTargetEnum.COMMENT,
     });
     await this.entityManager.save(postCommentLike);
-    return { message: "like created successfully!",  };
+    return { message: "like created successfully!" };
   }
 
   async findUserPersonalPosts(
@@ -313,34 +293,16 @@ export class PostService {
     query.orderBy("post.createdAt", "DESC");
     query.skip(skip).take(take);
     const posts = await query.getMany();
-    console.log("posts: ", posts);
 
-    // checking if presigned url is expired or not
-    for (let i = 0; i < posts.length; i++) {
-      posts[i].postMedias = await this.getNewPostMediasUrlAfterExpiration(
-        posts[i].postMedias,
-      );
-    }
+    const data = posts.map(post => ({
+      ...post,
+      postMedias: post.postMedias.map(media => ({
+        ...media,
+        url: this.awsService.getCloudFrontSignedUrl(media.url),
+      })),
+    }));
 
-    // TODO: check if presigned url is working or not
-    for (let i = 0; i < posts.length; i++) {
-      for (let j = 0; j < posts[i].postMedias.length; j++) {
-        const isWorking = await this.checkIfMediaUrlWorksOrNor(
-          posts[i].postMedias[j].url,
-        );
-        if (!isWorking) {
-          // create new url
-          const url = await this.generatePresignedUrl(
-            this.getKeyFromPresignedUrl(posts[i].postMedias[j].url),
-            await this.getS3Client(),
-            60 * 60 * 24 * 7, // 7 days
-          );
-          posts[i].postMedias[j].url = url;
-        }
-      }
-
-      return posts;
-    }
+    return data;
   }
 
   async findUserPersonalLikedPosts(
@@ -364,14 +326,15 @@ export class PostService {
       .take(take)
       .getMany();
 
-    // checking if presigned url is expired or not
-    for (let i = 0; i < likedPosts.length; i++) {
-      likedPosts[i].postMedias = await this.getNewPostMediasUrlAfterExpiration(
-        likedPosts[i].postMedias,
-      );
-    }
+    const data = likedPosts.map(post => ({
+      ...post,
+      postMedias: post.postMedias.map(media => ({
+        ...media,
+        url: this.awsService.getCloudFrontSignedUrl(media.url),
+      })),
+    }));
 
-    return likedPosts;
+    return data;
   }
 
   async findUserPersonalSavedPosts(
@@ -395,14 +358,14 @@ export class PostService {
       .take(take)
       .getMany();
 
-    // checking if presigned url is expired or not
-    for (let i = 0; i < savedPosts.length; i++) {
-      savedPosts[i].postMedias = await this.getNewPostMediasUrlAfterExpiration(
-        savedPosts[i].postMedias,
-      );
-    }
-
-    return savedPosts;
+    const data = savedPosts.map(post => ({
+      ...post,
+      postMedias: post.postMedias.map(media => ({
+        ...media,
+        url: this.awsService.getCloudFrontSignedUrl(media.url),
+      })),
+    }));
+    return data;
   }
 
   async findAllPosts(from: number, to: number) {
@@ -414,96 +377,92 @@ export class PostService {
     return { data: posts };
   }
 
-  async findAllComments(postId: string, from: number, to: number) {
-    const postComments: commentsResponseDataType[] = [];
-
-    await this.entityManager.transaction(async entityManager => {
-      const post = await entityManager.findOne(Post, {
-        where: {
-          id: postId,
-        },
-        select: ["id"],
-      });
-      if (!post) {
-        throw new NotFoundException("Post not found!");
-      }
-      const [comments]: [PostComments[], number] =
-        await entityManager.findAndCount(PostComments, {
-          where: { postId },
-          skip: from,
-          take: to,
-        });
-      // finding the relevant user belongs to the comment
-
-      comments.forEach(async comment => {
-        const user = await entityManager.findOne(User, {
-          where: { id: comment.userId },
-          select: [
-            "id",
-            "firstname",
-            "lastname",
-            "avatarUrl",
-            "userRoles",
-            "isSpecialUser",
-            "isVerified",
-          ],
-        });
-        postComments.push({
-          userId: user.id,
-          firstname: user.firstname,
-          lastname: user.lastname,
-          avatarUrl: user.avatarUrl,
-          userRoles: user.userRoles,
-          isSpecialUser: user.isSpecialUser,
-          isVerified: user.isVerified,
-          commentId: comment.id,
-          commentContent: comment.content,
-          commentLikes: comment.commentLikes,
-          createdAt: comment.createdAt,
-        });
-      });
-    });
-    return { data: postComments };
-  }
-
-  async findAllPostLikes(user:JwtAuthGuardTrueType, postId: string,isLatest:boolean, skip: number, take: number) {
-
+  async findAllPostLikes(
+    user: JwtAuthGuardTrueType,
+    postId: string,
+    isLatest: boolean,
+    skip: number,
+    take: number,
+  ) {
     const query = this.entityManager
-    .createQueryBuilder(PostCommentLike, "likes")
-    .select(["likes.id", "likes.likeType", "likes.createdAt"])
-    .leftJoin("likes.user", "user")
-    .addSelect(['user.id', 'user.firstname', 'user.lastname', 'user.avatarUrl', 'user.userRoles', 'user.isSpecialUser','user.isActive' ])
-    .where('likes.postId = :postId', { postId })
-    .andWhere('likes.targetType = :targetType', { targetType: PostLikeTargetEnum.POST })
-    .orderBy('likes.createdAt', isLatest ? 'DESC' : 'ASC')
-    .skip(skip)
-    .take(take)
+      .createQueryBuilder(PostCommentLike, "likes")
+      .select(["likes.id", "likes.likeType", "likes.createdAt"])
+      .leftJoin("likes.user", "user")
+      .addSelect([
+        "user.id",
+        "user.firstname",
+        "user.lastname",
+        "user.avatarUrl",
+        "user.userRoles",
+        "user.isSpecialUser",
+        "user.isActive",
+      ])
+      .where("likes.postId = :postId", { postId })
+      .andWhere("likes.targetType = :targetType", {
+        targetType: PostLikeTargetEnum.POST,
+      })
+      .orderBy("likes.createdAt", isLatest ? "DESC" : "ASC")
+      .skip(skip)
+      .take(take);
+    const likes = await query.getMany();
+    const data = likes.map(like => ({
+      ...like,
+      user: {
+        ...like.user,
+        avatarUrl: like.user.avatarUrl
+          ? this.awsService.getCloudFrontSignedUrl(like.user.avatarUrl)
+          : like.user.avatarUrl,
+      },
+    }));
+
+    return data;
+  }
+  async findAllCommentLikes(
+    user: JwtAuthGuardTrueType,
+    commentId: string,
+    isLatest: boolean,
+    skip: number,
+    take: number,
+  ) {
+    const query = this.entityManager
+      .createQueryBuilder(PostCommentLike, "likes")
+      .select(["likes.id", "likes.likeType", "likes.createdAt"])
+      .leftJoin("likes.user", "user")
+      .addSelect([
+        "user.id",
+        "user.firstname",
+        "user.lastname",
+        "user.avatarUrl",
+        "user.userRoles",
+        "user.isSpecialUser",
+        "user.isActive",
+      ])
+      .where("likes.commentId = :commentId", { commentId })
+      .andWhere("likes.targetType = :targetType", {
+        targetType: PostLikeTargetEnum.COMMENT,
+      })
+      .orderBy("likes.createdAt", isLatest ? "DESC" : "ASC")
+      .skip(skip)
+      .take(take);
     const likes = await query.getMany();
 
-    return likes 
-    
-      
-  }
-  async findAllCommentLikes(user:JwtAuthGuardTrueType, commentId: string,isLatest:boolean, skip: number, take: number) {
-    const query = this.entityManager
-    .createQueryBuilder(PostCommentLike, "likes")
-    .select(["likes.id", "likes.likeType", "likes.createdAt"])
-    .leftJoin("likes.user", "user")
-    .addSelect(['user.id', 'user.firstname', 'user.lastname', 'user.avatarUrl', 'user.userRoles', 'user.isSpecialUser','user.isActive' ])
-    .where('likes.commentId = :commentId', { commentId})
-    .andWhere('likes.targetType = :targetType', {  targetType: PostLikeTargetEnum.COMMENT })
-    .orderBy('likes.createdAt', isLatest ? 'DESC' : 'ASC')
-    .skip(skip)
-    .take(take)
-    const likes = await query.getMany();
+    const data = likes.map(like => ({
+      ...like,
+      user: {
+        ...like.user,
+        avatarUrl: like.user.avatarUrl
+          ? this.awsService.getCloudFrontSignedUrl(like.user.avatarUrl)
+          : like.user.avatarUrl,
+      },
+    }));
 
-    return likes 
+    return data;
   }
 
   async findOnePost(postId: string, userId: string) {
     const query = this.entityManager
       .createQueryBuilder(Post, "post")
-      .select(["post.id", "post.textContent", "post.createdAt", "post.postBy"])
+      .select(["post.id", "post.textContent", "post.createdAt", ])
       .leftJoinAndSelect("post.postMedias", "postMedias")
 
       // if creator user
@@ -579,7 +538,6 @@ export class PostService {
       .groupBy("post.id")
       .addGroupBy("post.textContent")
       .addGroupBy("post.createdAt")
-      .addGroupBy("post.postBy")
       .addGroupBy("postMedias.id")
       .addGroupBy("creatorUser.id")
       .addGroupBy("adminUser.id");
@@ -595,29 +553,35 @@ export class PostService {
       .getRawMany();
 
     const orderedData = prefixSplitNestingObject(postData, ["postMedias"]);
-    let postBy: object;
+    let postBy: any;
     if (orderedData.creatorUser.id) {
       postBy = { ...orderedData.creatorUser };
     } else {
       postBy = { ...orderedData.adminUser };
     }
     const data = {
-        postMedias: orderedData.postMedias,
-        createdAt: orderedData.post.createdAt,
-        postId: orderedData.post.id,
-        textContent: orderedData.post.textContent,
-        user: {
-          ...postBy,
-          userRole: orderedData.post.postBy,
-          isPostSaved: orderedData.userSaved,
-          isPostLiked: orderedData.userLiked,
-          postLikeType: orderedData.userLikedType,
-        },
-        interactions: {
-          totalLikes: orderedData.totalLikes,
-          totalComments: orderedData.totalComments,
-          mostLikeTypes: mostPostLikeTypes,
-        },
+      postMedias: orderedData.postMedias.map(media => ({
+        ...media,
+        url: media.url
+          ? this.awsService.getCloudFrontSignedUrl(media.url)
+          : media.url,
+      })),
+      createdAt: orderedData.post.createdAt,
+      postId: orderedData.post.id,
+      textContent: orderedData.post.textContent,
+      user: {
+        ...postBy,
+        avatarUrl:postBy?.avatarUrl ? this. awsService.getCloudFrontSignedUrl(postBy.avatarUrl):postBy?.avatarUrl,
+        userRole: orderedData.post.postBy,
+        isPostSaved: orderedData.userSaved,
+        isPostLiked: orderedData.userLiked,
+        postLikeType: orderedData.userLikedType,
+      },
+      interactions: {
+        totalLikes: orderedData.totalLikes,
+        totalComments: orderedData.totalComments,
+        mostLikeTypes: mostPostLikeTypes,
+      },
     };
     return data;
   }
@@ -672,8 +636,6 @@ export class PostService {
       .andWhere("userLike.userId = :userId", { userId: user.userId })
       .getMany();
 
-    console.log("currentUserLikes", currentUserLikes);
-
     // Merge data
     const data = comments.map(comment => {
       const likes = commentLikes.filter(like => like.commentId === comment.id);
@@ -701,7 +663,7 @@ export class PostService {
         select: ["id", "textContent"],
       });
       if (!post) {
-return
+        return;
       }
       post.textContent = updatePost.content;
       await this.entityManager.save(post);
@@ -709,16 +671,19 @@ return
     return { message: "post updated successfully!" };
   }
 
-  async updatePostLike(user:JwtAuthGuardTrueType, updateLike: CreatePostLikeDto){
+  async updatePostLike(
+    user: JwtAuthGuardTrueType,
+    updateLike: CreatePostLikeDto,
+  ) {
     const like = await this.entityManager.findOne(PostCommentLike, {
-      where:{
+      where: {
         postId: updateLike.postId,
         userId: user.userId,
         targetType: PostLikeTargetEnum.POST,
-      }
-    })
-    if(!like){
-      return
+      },
+    });
+    if (!like) {
+      return;
     }
     like.likeType = updateLike.likeType;
     await this.entityManager.save(like);
@@ -748,15 +713,42 @@ return
       },
     });
     if (!commentLike) {
-      return
+      return;
     }
     commentLike.likeType = updateCommentLike.likeType;
     await this.entityManager.save(commentLike);
-    return { message: "comment like updated successfully!", };
+    return { message: "comment like updated successfully!" };
   }
 
-  async removePost(id: string) {
-    await this.entityManager.delete(Post, { id });
+  async removePost(user: JwtAuthGuardTrueType, postId: string) {
+    let post:Post;
+    // first check if post belongs to user or not
+    if (user.userRole === UserRoleEnum.CREATOR) {
+      post = await this.entityManager.findOne(Post, {
+        where: { id: postId, creatorUserId:user.userId },
+        loadEagerRelations: false,
+      });
+    }else if(user.userRole === UserRoleEnum.ADMIN){
+       post = await this.entityManager.findOne(Post,{where:{id:postId,adminUserId:null},loadEagerRelations:false})
+    }
+      if (!post) throw new NotFoundException("Post not found!");
+    
+      // check post have media
+      const postMedias =await this.entityManager.find(PostMedia, {where:{postId:post.id},loadEagerRelations:false})
+      if(postMedias){
+        for(let i=0;i<postMedias.length;i++){
+          // deleting from s3 
+         const result = await this.awsService.deleteObjectFromS3(postMedias[i].url)
+          // invalidate from cloudfront
+          const result1 =await this.awsService.invalidateCloudfrontCache(postMedias[i].url)
+          console.log({result,result1})
+        }
+      }
+
+
+      await this.entityManager.delete(Post,{id:postId,}) 
+    
+    
     return { message: "Post deleted successfully!" };
   }
 
@@ -769,7 +761,7 @@ return
     await this.entityManager.delete(PostComments, { id });
     return { message: "Comment deleted successfully!" };
   }
-  async removePostLike(user:JwtAuthGuardTrueType,postId:string){
+  async removePostLike(user: JwtAuthGuardTrueType, postId: string) {
     await this.entityManager.delete(PostCommentLike, {
       postId,
       userId: user.userId,
@@ -781,13 +773,10 @@ return
     await this.entityManager.delete(UserSavedPostsAssociation, {
       userId: user.userId,
       postId,
-    })
+    });
     return { message: "Post unsaved successfully!" };
   }
-  async removePostCommentLike(
-    user: JwtAuthGuardTrueType,
-    commentId: string,
-  ) {
+  async removePostCommentLike(user: JwtAuthGuardTrueType, commentId: string) {
     const commentLike = await this.entityManager.findOne(PostCommentLike, {
       where: {
         userId: user.userId,
@@ -795,79 +784,12 @@ return
         targetType: PostLikeTargetEnum.COMMENT,
       },
     });
-    if(!commentLike)return // TODO: Handle this
-    await this.entityManager.delete(PostCommentLike,{userId: user.userId, commentId, targetType: PostLikeTargetEnum.COMMENT});
+    if (!commentLike) return; // TODO: Handle this
+    await this.entityManager.delete(PostCommentLike, {
+      userId: user.userId,
+      commentId,
+      targetType: PostLikeTargetEnum.COMMENT,
+    });
     return { message: "comment like deleted successfully!" };
-  }
-   getS3Client() {
-    const s3Client = new S3Client({
-      region: this.configService.get("AWS_S3_REGION"),
-      credentials: {
-        accessKeyId: this.configService.get("AWS_S3_ACCESS_KEY_ID"),
-        secretAccessKey: this.configService.get("AWS_S3_SECRET_ACCESS_KEY"),
-      },
-    });
-    return s3Client;
-  }
-  async generatePresignedUrl(
-    key: string,
-    s3Client: S3Client,
-    expiresIn: number = 1200,
-  ) {
-    const command = new GetObjectCommand({
-      Bucket: this.configService.getOrThrow("AWS_S3_BUCKET_NAME"),
-      Key: key,
-    });
-    return await getSignedUrl(s3Client, command, { expiresIn });
-  }
-
-  getKeyFromPresignedUrl(url: string) {
-    const keyPrefix =
-      "https://" +
-      this.configService.getOrThrow("AWS_S3_BUCKET_NAME") +
-      ".s3." +
-      this.configService.getOrThrow("AWS_S3_REGION") +
-      ".amazonaws.com/";
-    const key = url.split(keyPrefix)[1].split("?")[0];
-    return key;
-  }
-  checkPresignedUrlExpirationTime(url: string) {
-    // first get the timestamp from the url
-    const key = this.getKeyFromPresignedUrl(url);
-    const timestamps = parseInt(key.split("/")[2].split("-")[0]);
-    const diffMinutes = Math.floor((Date.now() - timestamps) / (1000 * 60));
-    if (diffMinutes >= 60) {
-      return true;
-    }
-    return false;
-  }
-  async getNewPostMediasUrlAfterExpiration(postMedias: PostMedia[]) {
-    for (let i = 0; i < postMedias.length; i++) {
-      // check if url is expires or not
-      if (this.checkPresignedUrlExpirationTime(postMedias[i].url)) {
-        // if expired then generate new url
-        const url = await this.generatePresignedUrl(
-          this.getKeyFromPresignedUrl(postMedias[i].url),
-          await this.getS3Client(),
-          Number.parseInt(this.configService.getOrThrow("AWS_S3_URL_EXPIRY")),
-        );
-        postMedias[i].url = url;
-      }
-    }
-    return postMedias;
-  }
-
-  async checkIfMediaUrlWorksOrNor(url: string) {
-    try {
-      const res = await axios.head(url);
-      if (res.status === 200) {
-        return true;
-      } else {
-        return false;
-      }
-    } catch (error) {
-      console.error("error from checkIfMediaUrlWorksOrNor", error);
-      return false;
-    }
   }
 }

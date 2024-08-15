@@ -15,7 +15,7 @@ import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useAppSelector } from "@/src/hooks/redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useDispatch } from "react-redux";
-import { setIsAuthenticated, setUser, userDataInitialState } from "@/src/store/slices/auth";
+import { setIsAuthenticated,  } from "@/src/store/slices/auth";
 
 export default function UserProfile() {
   const [search, setSearch] = useState("");
@@ -34,7 +34,6 @@ export default function UserProfile() {
         onPress: async () => {
           await AsyncStorage.clear();
           dispatch(setIsAuthenticated(false));
-          dispatch(setUser(userDataInitialState));
           router.navigate("/login");
         },
       },

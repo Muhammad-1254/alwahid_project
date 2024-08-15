@@ -6,6 +6,7 @@ import { PostForAdminController } from "./controllers/post-for-admin.controller"
 import { PostForAllUsersController } from "./controllers/post-for-all-users.controller";
 
 import { UserService } from "src/user/user.service";
+import { AwsService } from "src/aws/aws.service";
 
 @Module({
   controllers: [
@@ -14,6 +15,6 @@ import { UserService } from "src/user/user.service";
     PostForAdminController,
     PostForAllUsersController,
   ],
-  providers: [PostService, UserService],
+  providers: [PostService, UserService,AwsService],
 })
 export class PostModule {}

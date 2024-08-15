@@ -18,7 +18,7 @@ import { User } from "src/user/entities/user.entity";
 import { DatabaseController } from "./database.controller";
 import { DatabaseService } from "./database.service";
 import { CountryCode } from "./mix-entities/country-code.entity";
-import { PostService } from "src/post/post.service";
+import { AwsService } from "src/aws/aws.service";
 
 @Global()
 @Module({
@@ -50,7 +50,7 @@ import { PostService } from "src/post/post.service";
           CountryCode
   
         ],
-        synchronize: false,
+        synchronize: true,
       }),
     }),
     TypeOrmModule.forFeature([
@@ -73,7 +73,7 @@ import { PostService } from "src/post/post.service";
   ],
 
   controllers: [DatabaseController],
-  providers: [DatabaseService, PostService],
+  providers: [DatabaseService, AwsService],
   exports: [
     TypeOrmModule,
   ],

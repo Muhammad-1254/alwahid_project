@@ -1,9 +1,10 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { IsDate, IsNotEmpty,  IsString,  } from 'class-validator';
+import { IsDate, IsNotEmpty,  IsObject,  IsString,  } from 'class-validator';
+import { CreateLocationDTO } from 'src/location/dto/create-location.dto';
 
 
 
-class UserBasicInfo{
+class UserBasicInformation{
         
     @IsString()
     @IsNotEmpty()
@@ -21,8 +22,9 @@ class UserBasicInfo{
     @IsNotEmpty()
     @IsDate({message:"Valid date of birth required!"})
     dateOfBirth: Date;
-
+    
+    @IsObject()
+    location: CreateLocationDTO;
 }
 
-
-export class UpdateUserBasicData extends PartialType(UserBasicInfo){}
+export class UpdateUserBasicData extends PartialType(UserBasicInformation){}

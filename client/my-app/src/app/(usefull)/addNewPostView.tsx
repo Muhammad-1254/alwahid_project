@@ -7,7 +7,7 @@ import {
 } from "react-native";
 import React,{useEffect, useRef, useState} from "react";
 import { Stack, useRouter } from "expo-router";
-import { useAppSelector } from "@/src/hooks/redux";
+import { useAppDispatch, useAppSelector } from "@/src/hooks/redux";
 import {  Ionicons } from "@expo/vector-icons";
 import { useDispatch } from "react-redux";
 import { useColorScheme } from "nativewind";
@@ -26,15 +26,20 @@ import LoadingIndicatorModal from "@/src/components/modals/LoadingIndicatorModal
 import { setNewPostMedia } from "@/src/store/slices/addPost";
 import { getImageAspectRatio } from "@/src/lib/utils";
 import { Image } from "react-native";
+import ErrorHandler from "@/src/lib/ErrorHandler";
+import Toast from "react-native-root-toast";
+
 const AddNewPostView = () => {
   const [postUploadLoading,setPostUploadLoading] = useState(false);
-  const [postUploadProgress,setPostUploadProgress] = useState(0);
+  const [postUploadProgress,setPostUploadProgress] = useState({progress:0,completed:0});
+  // const [postUploadComplete,setPostUploadComplete] = useState(false);
+
   const abortController = useRef(new AbortController());
+  const dispatch = useAppDispatch();
   const { text, postMedias, uploadError,  } =
     useAppSelector((s) => s.newPost);
   const { colorScheme } = useColorScheme();
   const router = useRouter();
-  const dispatch = useDispatch();
 
   const uploadPostMedias = async (signal: AbortSignal) => {
     let presignedResData: { fileName: string; key: string; url: string }[] = [];
@@ -44,7 +49,6 @@ const AddNewPostView = () => {
       size: media.size,
     }));
 
-    console.log("presigned url started");
     const presignedRes = await cAxios.post(
       apiRoutes.createPostMediaPresignedUrl,
       postMediaReqData
@@ -53,7 +57,7 @@ const AddNewPostView = () => {
 
     // now put postMedia to aws s3
     let completeUploads = 0;
-    setPostUploadProgress(0)
+    setPostUploadProgress(prev=>({...prev,progress:0}))
     for (let i = 0; i < presignedResData.length; i++) {
       const file = postMedias.find(
         (media) => media.name === presignedResData[i].fileName
@@ -78,15 +82,13 @@ const AddNewPostView = () => {
           const current = progressEvent.loaded;
           const percent = Math.round((current / total!) * 100);
           console.log("percent : ", percent);
-          setPostUploadProgress(percent);
+          setPostUploadProgress(prev=>({...prev,progress:percent}));
         },
         signal,
       });
-      console.log("status from aws s3 : ", s3Res.status);
       completeUploads++;
-      console.log();
-        setPostUploadProgress(
-          Math.round((completeUploads / presignedResData.length) * 100));
+        setPostUploadProgress(prev=>({completed:prev.completed+1,progress:
+          Math.round((completeUploads / presignedResData.length) * 100)}))
       if (signal.aborted) return { postMediaReqData, presignedResData };
     }
     return { postMediaReqData, presignedResData };
@@ -97,7 +99,6 @@ const AddNewPostView = () => {
     const controller = new AbortController();
     abortController.current = controller;
     try {
-      console.log("post function started");
       const { postMediaReqData, presignedResData } = await uploadPostMedias(
         abortController.current.signal
       );
@@ -110,23 +111,35 @@ const AddNewPostView = () => {
             ?.mimeType,
         })),
       };
-
       const res = await cAxios.post(apiRoutes.createPost, postRequestData);
-
-      console.log("response from create post : ", res.data);
+      console.log(res.data)
       setPostUploadLoading(false)
+      if(res.status===201){
+        Toast.show("Post created successfully", {
+          duration: Toast.durations.SHORT,
+          position: Toast.positions.CENTER,
+          textColor:colorScheme==='dark'?Colors.dark.primaryForeground:Colors.light.primaryForeground,
+          backgroundColor:colorScheme==='dark'?Colors.dark.foreground:Colors.light.foreground,
+          containerStyle:{borderRadius:12},
+        })
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        router.replace("/(tabs)")
+      }
     } catch (e) {
       console.log("error from addNewPostHandler : ", e);
+      ErrorHandler.handle(e)
       setPostUploadLoading(false)
+
     }
   };
 
+ 
+
   const cancelUploadHandler = () => {
-    console.log("aborting upload");
     if (abortController.current) {
       abortController.current.abort();
       setPostUploadLoading(true)
-      setPostUploadProgress(0)
+      setPostUploadProgress({progress:0,completed:0})
     }
   };
 
@@ -173,7 +186,9 @@ const AddNewPostView = () => {
       />
       {/* loading indicator while uploading content */}
       <LoadingIndicatorModal cancelUploadHandler={cancelUploadHandler}
-      uploadLoading={postUploadLoading} uploadProgress={postUploadProgress}
+      uploadLoading={postUploadLoading} uploadProgress={postUploadProgress.progress}
+      loadingHeader={<Text className="text-primary dark:text-primaryDark text-2xl text-center mb-10">{postUploadProgress.completed}/{postMedias.length}</Text>}
+
       />
 
       <FlatList

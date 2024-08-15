@@ -66,7 +66,6 @@ export class AuthService {
         "gender",
         "location",
         "avatarUrl",
-        "age",
         "isVerified",
         "isSpecialUser",
         "authProvider",

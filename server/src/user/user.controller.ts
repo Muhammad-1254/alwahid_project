@@ -12,8 +12,6 @@ import {
 } from "@nestjs/common";
 import { UserService } from "./user.service";
 import {
-  CreateProfileAvatarDto,
-  CreateProfilePresignedUrlDto,
   createUserLocationDTO,
 } from "./dto/create-user.dto";
 import { UpdateUserBasicData, } from "./dto/update-user.dto";
@@ -35,12 +33,7 @@ export class UserController {
     return this.userService.followToAnotherUser(req.user.userId, followTo);
   }
 
-  @UseGuards(JwtAccessTokenGuard)
-  @Post("create/profile/presigned-url")
-  createProfilePresignedUrl(@Request() req, createPresignedUrl: CreateProfilePresignedUrlDto) {
-    return this.userService.createProfilePresignedUrl(req.user.userId,createPresignedUrl);
-  }
-  
+
   
 
   @Get()
@@ -63,11 +56,7 @@ export class UserController {
   getUserProfileComplete(@Request() req) {
     return this.userService.getUserProfileComplete(req.user);
   }
-  @UseGuards(JwtAccessTokenGuard)
-  @Get("get-similar-friend-zone-by-name")
-  findSimilarFriendsZoneByName(@Request() req, @Query("name") name: string) {
-    return this.userService.findSimilarFriendsZoneByName(name, req.user.userId);
-  }
+
   @Get("get-user-followers")
   getUserFollowers(
     @Query("userId") userId: string,
@@ -93,11 +82,7 @@ export class UserController {
     return this.userService.findOne(id);
   }
 
-  @UseGuards(JwtAccessTokenGuard)
-  @Post("create/profile/avatar")
-  updatedProfileAvatar(@Request() req, createPresignedUrl: CreateProfileAvatarDto) {
-    return this.userService.updatedProfileAvatar(req.user.userId,createPresignedUrl);
-  }
+
   
   // TODO: add aws separate service to handle this
   @UseGuards(JwtAccessTokenGuard)
@@ -117,7 +102,7 @@ export class UserController {
     return this.userService.updateProfileAvatar(req.user,imageProps);
   }
   @UseGuards(JwtAccessTokenGuard)
-  @Patch("profile/basic")
+  @Patch("/basic/information")
   updateUserBasicData(
     @Request() req,
     @Body()  updateUser :UpdateUserBasicData

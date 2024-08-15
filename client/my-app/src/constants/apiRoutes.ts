@@ -1,4 +1,6 @@
-const prefix = `${process.env.EXPO_PUBLIC_SERVER_DOMAIN_DEV}/api`;
+// const prefix = `${process.env.EXPO_PUBLIC_SERVER_DOMAIN_DEV}/api`;
+const prefix = `http://192.168.2.100:3333/api`;
+// const prefix = `https://alwahid.vercel.app/api`;
 
 export const apiRoutes = {
 
@@ -45,7 +47,7 @@ export const apiRoutes = {
   // user posts
   updatePostCommentLike :`${prefix}/post/comment/like`, // body=> commentId, likeType
   updatePostLike: `${prefix}/post/like`,  // body=> postId, likeType
-  updateUserProfileBasicInfo: `${prefix}/user/profile/basic` , // body=> 
+  updateUserBasicInformation: `${prefix}/user/basic/information` , // body=> 
   
   // user profile
   updateUserProfileAvatar: `${prefix}/user/profile/avatar`, // body=> {key:string}

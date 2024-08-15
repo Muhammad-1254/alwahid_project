@@ -30,9 +30,6 @@ export class User extends ParentEntity<User> {
   @Column({ nullable: true, type: "text" })
   avatarUrl: string;
 
-  @Column({ nullable: true, type: "int" })
-  age: number;
-
   @Column({ nullable: true,unique:true, type: "varchar" })
   phoneNumber: string;
 

@@ -6,6 +6,7 @@ import {
   Ip,
   Param,
   ParseIntPipe,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -67,14 +68,19 @@ export class PostForAdminCreatorController {
     return this.postService.findUserPersonalPosts(req.user, skip, take);
   }
   
-  
+@Roles(UserRoleEnum.ADMIN, UserRoleEnum.CREATOR)  
   @Patch("post")
   updatePostContent(@Body() updateComment: UpdatePostContentDto) {
     return this.postService.updatePostContent(updateComment);
   }
+
+@Roles(UserRoleEnum.ADMIN, UserRoleEnum.CREATOR)  
   @Delete("post/:id")
-  removePost(@Param("id") id: string) {
-    return this.postService.removePost(id);
+  removePost(
+    @Request()req ,
+    @Param("postId", ) postId: string,
+  ) {
+    return this.postService.removePost(req.user, postId);
   }
   @Delete("post/media/:id")
   removePostMedia(@Param("id") id: string) {

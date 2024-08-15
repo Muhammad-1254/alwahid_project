@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { CreateProfileAvatarDto, CreateProfilePresignedUrlDto, createUserLocationDTO } from "./dto/create-user.dto";
+import {  createUserLocationDTO } from "./dto/create-user.dto";
 import { EntityManager, Repository } from "typeorm";
 import { User } from "./entities/user.entity";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -15,10 +15,7 @@ import { JwtAuthGuardTrueType, UserRoleEnum } from "src/lib/types/user";
 import { AdminUser } from "./entities/user-admin.entity";
 import { prefixSplitNestingObject } from "src/lib/utils";
 import { UserFollowingAssociation } from "./entities/user-followers-association.entity";
-import { PostService } from "src/post/post.service";
-import { ConfigService } from "@nestjs/config";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { AwsService } from "src/aws/aws.service";
 
 @Injectable()
 export class UserService {
@@ -26,8 +23,7 @@ export class UserService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly entityManager: EntityManager,
-    private readonly postService: PostService,
-    private readonly configService: ConfigService,
+    private readonly awsService: AwsService,
   ) {}
 
   async createUserLocation(createUserLocation: createUserLocationDTO) {
@@ -64,27 +60,8 @@ export class UserService {
   findAllUsers() {
     return this.userRepository.find();
   }
-  async createProfilePresignedUrl(user: JwtAuthGuardTrueType, createPresignedUrl:CreateProfilePresignedUrlDto) {
-    const s3CLient = await this.postService.getS3Client();
-    const key = `profile-image/${user.userId}--${createPresignedUrl.fileName}`;
-    const command = new PutObjectCommand({
-      Bucket: this.configService.getOrThrow("AWS_S3_BUCKET_NAME"),
-      Key: key,
-      ContentType: createPresignedUrl.mimeType,
-    })
-    const url = await getSignedUrl(s3CLient, command, { expiresIn: 300 });
-    return { url, key };
-  }
-  
-  async updatedProfileAvatar(user:JwtAuthGuardTrueType, createProfile: CreateProfileAvatarDto){
-    const url = await this.postService.generatePresignedUrl(
-      createProfile.urlKey,
-      await this.postService.getS3Client(),
-      60*60*24*7*4*12,
-    )
-    await this.entityManager.update(User, {id:user.userId},{avatarUrl:url});  
-    return {message:"Profile image updated successfully",data:{avatarUrl:url}};
-  }
+
+ 
   
 
   async findOne(id: string) {
@@ -133,6 +110,10 @@ export class UserService {
 
       }
       delete data.id
+      // check if avatar url is present or not
+      if(data.avatarUrl){
+        data.avatarUrl = this.awsService.getCloudFrontSignedUrl(data.avatarUrl)
+      }
       
     return data
   }
@@ -279,26 +260,7 @@ export class UserService {
     return data;
   }
 
-  async findSimilarFriendsZoneByName(name: string, userId: string) {
-    // const data = [];
-    // const user = await this.entityManager.findOne(User, {
-    //   where: { id: userId },
-    // });
-    // user.following &&
-    //   user.following.forEach(item => {
-    //     if (item.firstname.includes(name) || item.lastname.includes(name)) {
-    //       data.push(item);
-    //     }
-    //   });
-    // user.followers &&
-    //   user.followers.forEach(item => {
-    //     if (item.firstname.includes(name) || item.lastname.includes(name)) {
-    //       data.push(item);
-    //     }
-    //   });
-    return "";
-  }
-
+  
   async getUserFollowers(
     userId: string,
     from: number,
@@ -356,26 +318,16 @@ export class UserService {
   }
   async getProfileAvatarUploadPresignedUrl(user:JwtAuthGuardTrueType, imageProps:{filename:string, fileSize:number, mimeType:string}){
     if(!imageProps.mimeType.includes("image"))return
-    const s3Client= this.postService.getS3Client()
     const key = `users/profile_avatar/${user.userId}_${new Date().getTime()}_${imageProps.filename}`
-    const command = new PutObjectCommand({
-      Bucket: this.configService.getOrThrow("AWS_S3_BUCKET_NAME"),
-      Key: key,
-      ContentType: imageProps.mimeType,
-    })
-    const url = await getSignedUrl(s3Client, command, {expiresIn:300})
+   const url = await this.awsService.generatePutPresignedUrl(key,imageProps.mimeType,500)
     return {url, urlKey:key}
   }
+
   async updateProfileAvatar(user:JwtAuthGuardTrueType,imageProps:{key:string}) {
     if(!imageProps.key)return
     
-    const s3Client = this.postService.getS3Client()
-    const expiresIn =Number.parseInt(this.configService.getOrThrow("AWS_S3_URL_EXPIRY"))
-    const url = await this.postService.generatePresignedUrl(
-      imageProps.key,
-      s3Client,
-      expiresIn
-    )
+    const url = this.awsService.getCloudFrontSignedUrl(imageProps.key)
+   
     const foundUser = await this.entityManager.findOne(User,
       {where:{
         id:user.userId,
@@ -383,7 +335,7 @@ export class UserService {
       loadEagerRelations:false
     })
     if(!foundUser) return;
-    foundUser.avatarUrl = url
+    foundUser.avatarUrl = imageProps.key
     await this.userRepository.update(foundUser.id,foundUser)
     return {url,message:"profile updated successfully!"}
   }
@@ -393,16 +345,47 @@ export class UserService {
   }
 
   async updateUserBasicData (user:JwtAuthGuardTrueType, updateUser:UpdateUserBasicData){
-    const foundUser = await this.userRepository.findOne({where:{id:user.userId}})
+    const foundUser = await this.userRepository.findOne({where:{id:user.userId},loadEagerRelations:false})
+    console.log({updateUser})
     if(!foundUser) throw new NotFoundException("User not Found")
     foundUser.firstname = updateUser.firstname || foundUser.firstname
     foundUser.lastname = updateUser.lastname || foundUser.lastname
     foundUser.phoneNumber = updateUser.phoneNumber || foundUser.phoneNumber
     foundUser.dateOfBirth = updateUser.dateOfBirth || foundUser.dateOfBirth
 
-    
-    console.log(foundUser);
-    await this.userRepository.update(foundUser.id, foundUser)
+    // check if location if location is change or not
+    if(updateUser.location){
+      // check if location is already exist or not
+      const foundLocation = await this.entityManager.findOne(Location,{where:{userId:user.userId}})
+      if (!foundLocation) {
+        // check country and city is provided or not
+        if((updateUser.location.country && updateUser.location.city && updateUser.location.province)===undefined){
+          throw new BadRequestException("Country and city is required")
+        }
+   
+
+        // create new location
+        const location = new Location({
+          country: updateUser.location.country,
+          city: updateUser.location.city,
+          province: updateUser.location.province,
+          street: updateUser.location.street,
+          zipCode: updateUser.location.zipCode,
+          userId: user.userId,
+        });
+        await this.entityManager.save(location);
+      }else{
+        // update location
+        foundLocation.country = updateUser.location.country || foundLocation.country
+        foundLocation.city = updateUser.location.city || foundLocation.city
+        foundLocation.province = updateUser.location.province || foundLocation.province
+        foundLocation.street = updateUser.location.street || foundLocation.street
+        foundLocation.zipCode = updateUser.location.zipCode || foundLocation.zipCode
+        await this.entityManager.update(Location,{id:foundLocation.id},foundLocation)
+      }
+    }
+       
+    await this.entityManager.update(User, {id:user.userId},foundUser)
     return {message:'user updated successfully'}
   }
   async unFollowToAnotherUser(userId: string, followingId: string) {
