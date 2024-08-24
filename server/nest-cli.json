@@ -1,8 +1,64 @@
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
-  "sourceRoot": "src",
+  "sourceRoot": "apps/api/src",
+  "monorepo": true,
+  "root": "apps/api",
   "compilerOptions": {
-    "deleteOutDir": true
+    "deleteOutDir": true,
+    "tsConfigPath": "apps/api/tsconfig.app.json"
+  },
+  "projects": {
+    "api":{
+      "type": "application",
+      "root": "apps/api",
+      "sourceRoot": "apps/api/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/api/tsconfig.app.json"
+      }
+    },
+    "micro-user":{
+      "type": "application",
+      "root": "apps/micro-user",
+      "sourceRoot": "apps/micro-user/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/micro-user/tsconfig.micro-user.json"
+      }
+    },
+    "micro-auth":{
+      "type": "application",
+      "root": "apps/micro-auth",
+      "sourceRoot": "apps/micro-auth/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/micro-auth/tsconfig.micro-auth.json"
+      }
+    },
+    "micro-post":{
+      "type": "application",
+      "root": "apps/micro-post",
+      "sourceRoot": "apps/micro-post/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/micro-post/tsconfig.micro-post.json"
+      }
+    },
+    "micro-aws":{
+      "type": "application",
+      "root": "apps/micro-aws",
+      "sourceRoot": "apps/micro-aws/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/micro-aws/tsconfig.micro-aws.json"
+      }
+    },
+    "shared":{
+      "type": "library",
+      "root": "libs/shared",
+      "entryFile": "index",
+      "sourceRoot": "libs/shared/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/shared/tsconfig.lib.json"
+      }
+    }
+    
   }
+
 }

@@ -1,0 +1,64 @@
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    # volumes:
+    #   - /var/lib/rabbitmq
+    ports:
+      - "5672:5672" 
+      - "15672:15672"
+    env_file:
+      - .env
+    networks:
+      - app-network
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: redis-commander
+    ports:
+      - "8081:8081"  # Redis-Commander port
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    networks:
+      - app-network
+  
+  # gateway:
+  #   build:
+  #     context: ./
+  #     dockerfile: ./Dockerfile
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - rabbitmq
+  #     - redis
+  #     - user
+  #   volumes:
+  #     - .:/usr/src/app
+  #     - /usr/src/app/node_modules
+  #   command: yarn start:dev
+
+  # user:
+  #   build:
+  #     context: ./
+  #     dockerfile: ./src/temp-m/user/Dockerfile
+  #   depends_on:
+  #     - rabbitmq
+  #   volumes:
+  #     - .:/usr/src/app
+  #     - /usr/src/app/node_modules
+  #   command: yarn start:dev user
+      
+
+  
+networks:
+  app-network:
+    driver: bridge
