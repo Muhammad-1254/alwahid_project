@@ -1,31 +1,33 @@
 import { Module } from "@nestjs/common";
-import { UserService } from "./services/user.service";
+import { UserService } from "./user.service";
 import { UserController } from "./user.controller";
-import {  DatabaseModule, MicroservicesNames, SharedModule } from "@app/shared";
+import { DatabaseModule, MicroservicesNames, SharedModule } from "@app/shared";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import {
-  User,
   AdminUser,
   CreatorUser,
+  Hashtag,
+  HashtagPostAssociation,
+  Location,
   NormalUser,
-  UserBlockAssociation,
-  UserFollowingAssociation,
-  UserSavedPostsAssociation,
-} from "./entities";
-import {
   Post,
   PostCommentLike,
   PostComments,
   PostMedia,
-} from "apps/micro-post/src/entities";
-import { Location } from "apps/micro-location/entities";
-import { Hashtag, HashtagPostAssociation } from "apps/micro-hashtag/entities";
+  User,
+  UserBlockAssociation,
+  UserFollowingAssociation,
+  UserSavedPostsAssociation,
+} from "@app/shared/entities";
 
 @Module({
   imports: [
     DatabaseModule,
     SharedModule,
-    SharedModule.registerRMQ(MicroservicesNames.AWS_SERVICE, process.env.RABBITMQ_QUEUE_NAME_AWS),
+    SharedModule.registerRMQ(
+      MicroservicesNames.AWS_SERVICE,
+      process.env.RABBITMQ_QUEUE_NAME_AWS,
+    ),
     TypeOrmModule.forFeature([
       User,
       AdminUser,
@@ -44,6 +46,6 @@ import { Hashtag, HashtagPostAssociation } from "apps/micro-hashtag/entities";
     ]),
   ],
   controllers: [UserController],
-  providers: [UserService,],
+  providers: [UserService],
 })
 export class UserModule {}

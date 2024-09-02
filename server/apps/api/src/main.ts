@@ -13,11 +13,11 @@ async function bootstrap() {
   // app.enableCors();
   app.useGlobalPipes(new ValidationPipe({ skipMissingProperties: true }));
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
-  app.useGlobalFilters(new AllExceptionFilter());
+  // app.useGlobalFilters(new AllExceptionFilter());
   app.use(helmet())
   app.setGlobalPrefix('api');
   setupSwagger(app);  
-  await app.listen(3333);
+  await app.listen(3000);
 }
 bootstrap();
 

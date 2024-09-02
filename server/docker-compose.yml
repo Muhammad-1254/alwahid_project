@@ -3,8 +3,9 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
-    # volumes:
-    #   - /var/lib/rabbitmq
+    hostname: "rabbitmq"
+    volumes:
+      - /var/lib/rabbitmq
     ports:
       - "5672:5672" 
       - "15672:15672"
@@ -16,8 +17,13 @@ services:
   redis:
     image: redis:latest
     container_name: redis
+    # command: /bin/sh -c "redis-server --requirepass $$REDIS_PASS"
     ports:
       - "6379:6379"
+    # env_file:
+    #   - .env
+    # volumes:
+    #   - ./redis/data:/data
     networks:
       - app-network
 
@@ -25,38 +31,96 @@ services:
     image: rediscommander/redis-commander:latest
     container_name: redis-commander
     ports:
-      - "8081:8081"  # Redis-Commander port
+      - "8000:8081"  # Redis-Commander port
     environment:
       - REDIS_HOSTS=local:redis:6379
     networks:
       - app-network
   
-  # gateway:
+ 
+  # api:
   #   build:
   #     context: ./
-  #     dockerfile: ./Dockerfile
+  #     dockerfile: ./apps/api/Dockerfile
   #   ports:
   #     - "3000:3000"
+  #   env_file:
+  #     - .env
   #   depends_on:
   #     - rabbitmq
   #     - redis
-  #     - user
   #   volumes:
   #     - .:/usr/src/app
   #     - /usr/src/app/node_modules
-  #   command: yarn start:dev
+  #   command: npm run start:dev api
 
-  # user:
+  # micro-user:
   #   build:
   #     context: ./
-  #     dockerfile: ./src/temp-m/user/Dockerfile
+  #     dockerfile: ./apps/micro-user/Dockerfile
+  #   env_file:
+  #     - .env
   #   depends_on:
   #     - rabbitmq
   #   volumes:
   #     - .:/usr/src/app
   #     - /usr/src/app/node_modules
-  #   command: yarn start:dev user
-      
+  #   command: npm run start:dev micro-user
+
+  # micro-post:
+  #   build:
+  #     context: ./
+  #     dockerfile: ./apps/micro-post/Dockerfile
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     - rabbitmq
+  #   volumes:
+  #     - .:/usr/src/app
+  #     - /usr/src/app/node_modules
+  #   command: npm run start:dev micro-post
+
+  # micro-aws:
+  #   build:
+  #     context: ./
+  #     dockerfile: ./apps/micro-aws/Dockerfile
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     - rabbitmq
+  #   volumes:
+  #     - .:/usr/src/app
+  #     - /usr/src/app/node_modules
+  #   command: npm run start:dev micro-aws
+
+  # micro-auth:
+  #   build:
+  #     context: ./
+  #     dockerfile: ./apps/micro-auth/Dockerfile
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     - rabbitmq
+  #   volumes:
+  #     - .:/usr/src/app
+  #     - /usr/src/app/node_modules
+  #   command: npm run start:dev micro-auth
+  
+  # micro-chat:
+  #   build:
+  #     context: ./
+  #     dockerfile: ./apps/micro-chat/Dockerfile
+  #   ports:
+  #     - "3001:3001"
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     - rabbitmq
+  #     - redis
+  #   volumes:
+  #     - .:/usr/src/app
+  #     - /usr/src/app/node_modules
+  #   command: npm run start:dev micro-chat
 
   
 networks:

@@ -5,27 +5,45 @@ import { PostForAdminCreatorController } from "./controllers/post-for-admin-crea
 import { PostForAdminController } from "./controllers/post-for-admin.controller";
 import { PostAllUsersController } from "./controllers/post-for-all-users.controller";
 
-import { UserService } from "apps/micro-user/src/services/user.service";
+import { UserService } from "apps/micro-user/src/user.service";
 import { DatabaseModule, MicroservicesNames, SharedModule } from "@app/shared";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { User,AdminUser,CreatorUser,NormalUser,UserBlockAssociation,UserFollowingAssociation,UserSavedPostsAssociation
-} from 'apps/micro-user/src/entities';
-import { Post,PostCommentLike,PostComments,PostMedia } from 'apps/micro-post/src/entities';
-import { Location, } from 'apps/micro-location/entities';
-import { Hashtag,HashtagPostAssociation } from 'apps/micro-hashtag/entities';
-
-
+import {
+  AdminUser,
+  CreatorUser,
+  Hashtag,
+  HashtagPostAssociation,
+  Location,
+  NormalUser,
+  Post,
+  PostCommentLike,
+  PostComments,
+  PostMedia,
+  User,
+  UserBlockAssociation,
+  UserFollowingAssociation,
+  UserSavedPostsAssociation,
+} from "@app/shared/entities";
 @Module({
   imports :[
     DatabaseModule,
-    SharedModule.registerRMQ(MicroservicesNames.AWS_SERVICE, process.env.RABBITMQ_QUEUE_NAME_AWS),
     SharedModule,
+    SharedModule.registerRMQ(MicroservicesNames.AWS_SERVICE, process.env.RABBITMQ_QUEUE_NAME_AWS),
     TypeOrmModule.forFeature([
-      User,AdminUser,CreatorUser,NormalUser,UserBlockAssociation,UserFollowingAssociation,UserSavedPostsAssociation,
-      Post,PostCommentLike,PostComments,PostMedia,
+      User,
+      AdminUser,
+      CreatorUser,
+      NormalUser,
+      UserBlockAssociation,
+      UserFollowingAssociation,
+      UserSavedPostsAssociation,
+      Post,
+      PostCommentLike,
+      PostComments,
+      PostMedia,
       Location,
       Hashtag,
-      HashtagPostAssociation
+      HashtagPostAssociation,
     ]),
   ],
   controllers: [

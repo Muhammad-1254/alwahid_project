@@ -14,13 +14,14 @@ export class SharedService implements SharedServiceInterface{
     getRmqOptions(queueName: string): RmqOptions {
         const RABBITMQ_USER = this.configService.getOrThrow("RABBITMQ_USER");
         const RABBITMQ_PASS = this.configService.getOrThrow("RABBITMQ_PASS");
-        // const RABBITMQ_HOST = this.configService.getOrThrow("RABBITMQ_HOST");
-        const RABBITMQ_HOST = "localhost:5672";
+        const RABBITMQ_HOST = this.configService.getOrThrow("RABBITMQ_HOST");
 
+        const url = `amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@${RABBITMQ_HOST}:5672`
+        const localUrl = `amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@localhost:5672`
         return {
             transport:Transport.RMQ,
             options:{
-                urls:[`amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@${RABBITMQ_HOST}`],
+                urls:[localUrl],
                 noAck:false,
                 queue:queueName,
                 queueOptions:{

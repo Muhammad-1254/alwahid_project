@@ -1,10 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import { CreateHashtagDto } from "./dto/create-hashtag.dto";
 import { EntityManager, Like, Repository } from "typeorm";
-import { Hashtag } from "./entities/hashtag.entity";
+import { Hashtag } from "../../libs/shared/src/entities/micro-hashtag.entities/hashtag.entity";
 import { v4 as uuid } from "uuid";
 import { InjectRepository } from "@nestjs/typeorm";
-import { HashtagPostAssociation } from "./entities/hashtag-post-association.entity";
+import { HashtagPostAssociation } from "../../libs/shared/src/entities/micro-hashtag.entities/hashtag-post-association.entity";
 
 @Injectable()
 export class HashtagService {

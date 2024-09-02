@@ -4,7 +4,7 @@ import {
   UseGuards,
  
 } from "@nestjs/common";
-import { UserService } from "./services/user.service";
+import { UserService } from "./user.service";
 import {
   JwtAuthGuardTrueType,
   MicroservicesNames,
@@ -55,6 +55,14 @@ export class UserController {
     this.sharedService.acknowledgeMessage(context)
     return this.userService.getAllUsers();
   }
+  @MessagePattern({ cmd: "get-unsecure-user" })
+  getUnsecureUser(
+    @Ctx()context: RmqContext,
+    @Payload() data: { userId: string }) {
+    this.sharedService.acknowledgeMessage(context)
+    return this.userService.getUnsecureUser(data.userId);
+  }
+
 
   @MessagePattern({ cmd: "getUserProfile" })
   getUserProfile(@Ctx() context: RmqContext,@Payload() user:JwtAuthGuardTrueType) {
@@ -94,6 +102,15 @@ export class UserController {
     this.sharedService.acknowledgeMessage(context)
     return this.userService.getProfileAvatarUploadPresignedUrl(data);
   }
+  @MessagePattern({ cmd: "getUserByEmail" })
+  getUserByEmail(
+    @Ctx() context: RmqContext, 
+    @Payload() data: {email:string}
+  ) {
+    this.sharedService.acknowledgeMessage(context)
+    return this.userService.getUserByEmail(data.email);
+  }
+  
 
   @MessagePattern({ cmd: "updateProfileAvatar" })
   updateProfileAvatar(

@@ -14,16 +14,16 @@ import {
 } from "@app/shared";
 
 import { v4 as uuid } from "uuid";
-import { Post } from "../entities/post.entity";
-import { PostMedia } from "../entities/post-media.entity";
+import { Post } from "../../../../libs/shared/src/entities/micro-post.entities/post.entity";
+import { PostMedia } from "../../../../libs/shared/src/entities/micro-post.entities/post-media.entity";
 import { EntityManager } from "typeorm";
-import { PostComments } from "../entities/post-comment.entity";
-import { User } from "apps/micro-user/src/entities/user.entity";
+import { PostComments } from "../../../../libs/shared/src/entities/micro-post.entities/post-comment.entity";
+import { User } from "@app/shared/entities/micro-user.entities/user.entity";
 
-import { PostCommentLike } from "../entities/post-comment-like.entity";
+import { PostCommentLike } from "../../../../libs/shared/src/entities/micro-post.entities/post-comment-like.entity";
 import { ConfigService } from "@nestjs/config";
 
-import { UserSavedPostsAssociation } from "apps/micro-user/src/entities/user-saved-post.entity";
+import { UserSavedPostsAssociation } from "@app/shared/entities/micro-user.entities/user-saved-post.entity";
 import { PostLikeTargetEnum } from "@app/shared/enums/post.enum";
 import { UserRoleEnum } from "@app/shared/enums/user.enum";
 import { prefixSplitNestingObject } from "@app/shared/utils/helper-functions.utils";

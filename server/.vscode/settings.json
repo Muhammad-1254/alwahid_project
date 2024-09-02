@@ -1,7 +1,10 @@
 {
     "cSpell.words": [
         "dtos",
+        "firstname",
+        "lastname",
         "RABBITMQ",
+        "timestamptz",
         "UNPOOLED"
     ]
 }

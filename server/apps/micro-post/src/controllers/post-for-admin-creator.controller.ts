@@ -51,7 +51,7 @@ export class PostForAdminCreatorController {
     return this.postService.createPostMedia(data);
   }
 
-  @MessagePattern({ cmd: "findUserPersonalPosts" })
+  @MessagePattern({ cmd: "getUserPersonalPosts" })
   getUserPersonalPosts(
     @Ctx() context: RmqContext,
     @Payload() data: GetUserPersonalPostsPayloadType,
