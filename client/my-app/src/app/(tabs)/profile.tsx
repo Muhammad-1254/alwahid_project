@@ -195,6 +195,8 @@ const profileImagePressHandler =()=>{
   };
 
   const canFetchMore = async () => {
+    console.log("tabIndex: ",tabIndex)
+    console.log("post control: ",postControl.post.isComplete)
     if (tabIndex === ProfileTabEnum.POSTS) {
       if (postControl.post.isComplete) return;
       await getPersonalPostData()

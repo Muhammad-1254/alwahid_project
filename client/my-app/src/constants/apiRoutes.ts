@@ -1,5 +1,6 @@
 // const prefix = `${process.env.EXPO_PUBLIC_SERVER_DOMAIN_DEV}/api`;
-const prefix = `http://192.168.2.100:3333/api`;
+const prefix = `http://192.168.2.107:3000/api`;
+const chatPrefix = `http://192.168.2.107:3001/api`;
 // const prefix = `https://alwahid.vercel.app/api`;
 
 export const apiRoutes = {
@@ -57,4 +58,29 @@ export const apiRoutes = {
   removePostLike: `${prefix}/post/like`,  // Param=> postId
   removePostSave: `${prefix}/post/save`,  // Param=> postId
 
+
 };
+
+
+export const apiChatRoutes = {
+
+// websocket connection
+  wsUrl: `http://localhost:3001`, // get
+
+  // subscription
+  getUnreadMessages:"getUnreadMessages",
+  createPersonalChat:"createPersonalChat",
+  sendPersonalMessage:"sendPersonalMessage",
+  sendGroupMessage:"sendGroupMessage",
+  isUserOnChatSection:"isUserOnChatSection",
+
+
+  
+  // REST API
+  createNewGroup: `${chatPrefix}/chats/group/new`, // post
+  addUserInGroup: `${chatPrefix}/chats/group/add-users`, // post
+  updateGroupInfo: `${chatPrefix}/chats/group/update/info`, // patch
+  removeUsersFromGroup: `${chatPrefix}/chats/group/remove/user`, // delete
+}
+
+

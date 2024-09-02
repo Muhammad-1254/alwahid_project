@@ -46,12 +46,12 @@ export default function Home() {
         const accessToken = await AsyncStorage.getItem("accessToken")
         console.log({refreshToken,accessToken})
       }}/>
-      <FlatList
+      {/* <FlatList
         className="w-full  py-4 "
         data={homePageData}
         renderItem={HomePageItem}
         keyExtractor={(item) => item.id.toString()}
-      />
+      /> */}
     </View>
   );
 }
