@@ -29,6 +29,7 @@ async function bootstrap() {
   app.startAllMicroservices();
   app.useGlobalPipes(new ValidationPipe({ skipMissingProperties: true }));
 
+<<<<<<< HEAD
   await app.listen(3001,);
 
 
@@ -37,5 +38,8 @@ async function bootstrap() {
     module.hot.accept();
     module.hot.dispose(() => app.close());
   }
+=======
+  await app.listen(3001);
+>>>>>>> c995c571a3519d912561c070168b458e66627329
 }
 bootstrap();

@@ -54,7 +54,7 @@ export class UserController {
     this.sharedService.acknowledgeMessage(context);
     return this.userService.getAllUsers();
   }
-
+ 
   @MessagePattern({ cmd: "getUsersSearch" })
   async getUsersSearch(
     @Ctx() context: RmqContext,

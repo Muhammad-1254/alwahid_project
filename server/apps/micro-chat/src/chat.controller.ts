@@ -26,6 +26,7 @@ export class ChatController{
     return await this.chatService.checkUserOnChatSection(data)
     }
 
+
     @MessagePattern({cmd:"createNewUserInChatSection"})
     async createNewUserInChatSection(
         @Ctx() context:RmqContext,

@@ -59,6 +59,7 @@ export class CreatePersonalMessageDto {
   @IsUUID('4')
   friendId:string
 
+<<<<<<< HEAD
   @IsString()
   textContent:string
 
@@ -112,6 +113,18 @@ export class MessageSeenDto{
 }
 
 
+=======
+  @IsNotEmpty()
+  @IsString()
+  content:string
+
+  @IsNotEmpty()
+  @IsString()
+  mimeType:string
+  
+}
+
+>>>>>>> c995c571a3519d912561c070168b458e66627329
 export class CreateGroupMessageDto {
   @IsNotEmpty()
   @IsUUID('4')
