@@ -13,7 +13,7 @@ import { useColorScheme } from "nativewind";
 import { Colors } from "@/src/constants/Colors";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useAppSelector } from "@/src/hooks/redux";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import { useDispatch } from "react-redux";
 import { setIsAuthenticated,  } from "@/src/store/slices/auth";
 
@@ -32,7 +32,8 @@ export default function UserProfile() {
       {
         text: "OK",
         onPress: async () => {
-          await AsyncStorage.clear();
+          await SecureStore.deleteItemAsync("accessToken");
+          await SecureStore.deleteItemAsync("refreshToken");
           dispatch(setIsAuthenticated(false));
           router.navigate("/login");
         },

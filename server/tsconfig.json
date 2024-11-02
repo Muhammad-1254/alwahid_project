@@ -26,4 +26,7 @@
       ],
     }
   }
+  ,"watchOptions": {
+    "watchFile": "fixedPollingInterval"
+  },
 }

@@ -3,7 +3,7 @@ import { UserModule } from "./user.module"
 import { ConfigService } from "@nestjs/config"
 import { SharedService } from "@app/shared"
 
-
+declare const module: any
 async function bootstrap() {
     const app = await NestFactory.create(UserModule)
 
@@ -13,6 +13,13 @@ async function bootstrap() {
 
     app.connectMicroservice(sharedService.getRmqOptions(queue))
     app.startAllMicroservices();
+
+    
+      // for hot module replacement
+  if (module.hot) {
+    module.hot.accept();
+    module.hot.dispose(() => app.close());
+  }
 
 }
 

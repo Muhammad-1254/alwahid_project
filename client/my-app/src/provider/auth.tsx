@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useAppDispatch } from "../hooks/redux";
 import { useRouter } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import { AppState, AppStateStatus, Text, View } from "react-native";
 import { getTokenFromStorage } from "../lib/utils";
 
@@ -16,10 +16,10 @@ export default function AuthProvider({
   console.log("auth provider called");
   useEffect(() => {
     async function checkTokens() {
-      const accessToken = await AsyncStorage.getItem("accessToken");
-      const refreshToken = await AsyncStorage.getItem("refreshToken");
+      const accessToken = await   SecureStore.getItemAsync("accessToken");
+      const refreshToken = await  SecureStore.getItemAsync("refreshToken");
       if (!accessToken && !refreshToken) {
-        router.navigate("(auth)/login");
+        router.navigate("/(auth)/login");
         return
       }
     
@@ -41,7 +41,7 @@ export default function AuthProvider({
   const handleAppStateChange = async (nextAppState: AppStateStatus) => {
     if (appState.match("/inactive|background/") && nextAppState === "active") {
       const { accessToken, refreshToken } = await getTokenFromStorage();
-      if (!accessToken && !refreshToken) router.navigate("(auth)/login");
+      if (!accessToken && !refreshToken) router.navigate("/(auth)/login");
     }
     setAppState(nextAppState);
   };

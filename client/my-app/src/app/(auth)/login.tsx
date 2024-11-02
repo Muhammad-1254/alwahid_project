@@ -3,7 +3,7 @@ import { View, TextInput, Text, Pressable, ScrollView } from "react-native";
 import { Link, useRouter } from "expo-router";
 import axios from "axios";
 import { apiRoutes } from "@/src/constants/apiRoutes";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import Checkbox from "expo-checkbox";
 import { UserRoleEnum } from "@/src/types/user";
 import { AuthLoadingModal } from "./signup";
@@ -83,8 +83,8 @@ export default function Login() {
       if (res.status === 200 || res.status === 201) {
         if (res.data.accessToken && res.data.refreshToken) {
           // save token to local storage
-          await AsyncStorage.setItem("accessToken", res.data.accessToken);
-          await AsyncStorage.setItem("refreshToken", res.data.refreshToken);
+          await SecureStore.setItemAsync("accessToken", res.data.accessToken);
+          await SecureStore.setItemAsync("refreshToken", res.data.refreshToken);
           // save user data to redux
           dispatch(setIsAuthenticated(true));
         } else {

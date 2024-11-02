@@ -14,16 +14,16 @@ import {
 } from "@app/shared";
 
 import { v4 as uuid } from "uuid";
-import { Post } from "../entities/post.entity";
-import { PostMedia } from "../entities/post-media.entity";
+import { Post } from "../../../../libs/shared/src/entities/micro-post.entities/post.entity";
+import { PostMedia } from "../../../../libs/shared/src/entities/micro-post.entities/post-media.entity";
 import { EntityManager } from "typeorm";
-import { PostComments } from "../entities/post-comment.entity";
-import { User } from "apps/micro-user/src/entities/user.entity";
+import { PostComments } from "../../../../libs/shared/src/entities/micro-post.entities/post-comment.entity";
+import { User } from "@app/shared/entities/micro-user.entities/user.entity";
 
-import { PostCommentLike } from "../entities/post-comment-like.entity";
+import { PostCommentLike } from "../../../../libs/shared/src/entities/micro-post.entities/post-comment-like.entity";
 import { ConfigService } from "@nestjs/config";
 
-import { UserSavedPostsAssociation } from "apps/micro-user/src/entities/user-saved-post.entity";
+import { UserSavedPostsAssociation } from "@app/shared/entities/micro-user.entities/user-saved-post.entity";
 import { PostLikeTargetEnum } from "@app/shared/enums/post.enum";
 import { UserRoleEnum } from "@app/shared/enums/user.enum";
 import { prefixSplitNestingObject } from "@app/shared/utils/helper-functions.utils";
@@ -39,6 +39,7 @@ import {
   FindUserPersonalLikedPostsPayloadType,
   GetAllCommentsPayloadType,
   GetAllPostsPayloadType,
+  GetUserFeedPayloadType,
   GetUserPersonalPostsPayloadType,
   RemovePostCommentPayloadType,
   RemovePostLikePayloadType,
@@ -51,6 +52,8 @@ import {
 import { CustomRpcExceptions } from "@app/shared/filters/CustomRpcExceptions.filter";
 import { ClientProxy } from "@nestjs/microservices";
 import { firstValueFrom } from "rxjs";
+import { getCloudFrontSignedUrl } from "../utils/aws.utils";
+import { UserFollowingAssociation } from "@app/shared/entities";
 
 @Injectable()
 export class PostService {
@@ -342,6 +345,74 @@ export class PostService {
     return posts;
   }
 
+  async getUserFeed(data_: GetUserFeedPayloadType) {
+    const {skip,take,user} = data_
+    const feed =[]
+  // following users
+  const following = await this.entityManager
+  .createQueryBuilder(UserFollowingAssociation,'userFollowing')
+  .select(['userFollowing.followingId'])
+  .where('userFollowing.userId = :userId',{userId:user.userId})
+  .skip(Math.floor(skip/2))
+  .take(Math.floor(take/2)) 
+  .getMany()
+  console.log("following: ",following)
+  const followingIds = following.map(follow => follow.followingId)
+  console.log("followingIds: ",followingIds)
+  
+    if(followingIds.length > 0){
+
+      const followingPosts = await this.entityManager
+      .createQueryBuilder(Post,'post')
+      .where('post.creatorUserId IN (:...followingIds)',{followingIds})
+      .orWhere('post.adminUserId IN (:...followingIds)',{followingIds})
+      .orderBy('post.createdAt','DESC')
+      .skip(Math.floor(skip/2))
+      .take(Math.floor(take/2)) 
+      .getMany()
+      console.log("followingPosts: ",followingPosts)
+      feed.push(...followingPosts)
+    }
+
+
+  // trending posts
+  const trendingPosts = await this.entityManager
+  .createQueryBuilder(Post,'post')
+  .leftJoinAndSelect('post.postLikes','likes')
+  .loadRelationCountAndMap('post.postLikes','post.likesCount')
+  .orderBy('post.likesCount','DESC')
+  .limit(10)
+  .getMany()
+  console.log("trendingPosts: ",trendingPosts)
+  feed.push(...trendingPosts)
+// TODO: complete this 
+  // personal suggested posts
+  // const likedTags = await this.tagsRepository
+  //       .createQueryBuilder("tag")
+  //       .leftJoin("tag.posts", "posts")
+  //       .leftJoin("posts.likes", "likes")
+  //       .where("likes.userId = :userId", { userId })
+  //       .select("tag.name")
+  //       .groupBy("tag.name")
+  //       .orderBy("COUNT(tag.id)", "DESC") // Most liked tags by the user
+  //       .limit(10)
+  //       .getMany();
+    
+  //   const suggestedPosts = await this.postsRepository
+  //       .createQueryBuilder("post")
+  //       .leftJoinAndSelect("post.tags", "tags")
+  //       .where("tags.name IN (:...likedTags)", { likedTags: likedTags.map(t => t.name) })
+  //       .limit(10) // Limit to 10 suggested posts
+  //       .getMany();
+        
+  //   return suggestedPosts;
+
+  
+  // combine all posts
+    feed
+    .sort((a,b)=>b.createdAt.getTime()-a.createdAt.getTime())
+    return feed
+  }
   async findUserPersonalLikedPosts(
     data_: FindUserPersonalLikedPostsPayloadType,
   ) {
@@ -596,7 +667,6 @@ export class PostService {
       .addGroupBy("adminUser.id");
 
     const postData = await query.getRawMany();
-
     const mostPostLikeTypes = await this.entityManager
       .createQueryBuilder(PostCommentLike, "postLikes")
       .select("postLikes.likeType", "likeType")
@@ -615,33 +685,18 @@ export class PostService {
     
     for (let i = 0; i < orderedData.postMedias.length; i++) {
       if(orderedData.postMedias[i]?.url){
-        const responseFromAws = this.awsService.send(
-        { cmd: "getCloudFrontSignedUrl" },
-        { urlKey: orderedData.postMedias[i].url },
-      );
-      const url = await firstValueFrom(responseFromAws).catch(err => {
-        console.log(err);
-        throw CustomRpcExceptions.InternalException();
-      });
-      
+        const url = await getCloudFrontSignedUrl(this.awsService, orderedData.postMedias[i].url);
+      orderedData.postMedias[i].url = url;
     }
-
     }
     const data = {
-      postMedias: orderedData.postMedias.map(async media => ({
-        ...media,
-        url: media.url
-          ?await this.awsService.send({cmd:"getCloudFrontSignedUrl",},{urlKey:media.url}).forEach(async (res)=>await firstValueFrom(res))
-          : media.url,
-      })),
+      postMedias: orderedData.postMedias,
       createdAt: orderedData.post.createdAt,
       postId: orderedData.post.id,
       textContent: orderedData.post.textContent,
       user: {
         ...postBy,
-        avatarUrl: postBy?.avatarUrl
-          ? await this.awsService.send({cmd:"getCloudFrontSignedUrl",},{urlKey:postBy.avatarUrl}).forEach(async (res)=>await firstValueFrom(res))
-          : postBy?.avatarUrl,
+        avatarUrl: postBy?.avatarUrl?await getCloudFrontSignedUrl(this.awsService, postBy.avatarUrl):null,
         userRole: orderedData.post.postBy,
         isPostSaved: orderedData.userSaved,
         isPostLiked: orderedData.userLiked,

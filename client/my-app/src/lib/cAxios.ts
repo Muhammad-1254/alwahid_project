@@ -1,5 +1,5 @@
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from "expo-secure-store";
 import { apiRoutes } from '../constants/apiRoutes';
 import { router } from 'expo-router';
 
@@ -9,7 +9,7 @@ const cAxios = axios.create({
 
 // Request interceptor to add token to headers
 cAxios.interceptors.request.use(async (config) => {
-  const accessToken = await AsyncStorage.getItem('accessToken');
+  const accessToken = await SecureStore.getItemAsync('accessToken');
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
   }
@@ -34,15 +34,15 @@ cAxios.interceptors.response.use((response) => {
     
     // try to refresh the token 
     try {
-      const refreshToken = await AsyncStorage.getItem("refreshToken")
+      const refreshToken = await SecureStore.getItemAsync("refreshToken")
       const response = await axios.post(apiRoutes.getAccessToken,{refreshToken})
       console.log("response status from get new access token: ",response.status)
       if(response.status ===200|| response.status ===201){
         const {accessToken,refreshToken} = response.data
 
         // save new tokens
-        await AsyncStorage.setItem('accessToken', accessToken);
-        await AsyncStorage.setItem('refreshToken', refreshToken);
+        await SecureStore.setItemAsync('accessToken', accessToken);
+        await SecureStore.setItemAsync('refreshToken', refreshToken);
 
         // set the new accessToken in the request headers
         cAxios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`
@@ -56,9 +56,9 @@ cAxios.interceptors.response.use((response) => {
     } catch (refreshError) {
       // if this fails, logout the user
       console.error("Token refresh failed: ",refreshError)
-      await AsyncStorage.removeItem('accessToken');
-      await AsyncStorage.removeItem('refreshToken');
-      router.navigate("/login")
+      await SecureStore.deleteItemAsync('accessToken');
+      await SecureStore.deleteItemAsync('refreshToken');
+      router.navigate("/(auth)/login")
     }
   
   }

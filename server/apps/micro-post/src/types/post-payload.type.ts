@@ -25,6 +25,12 @@ export type CreatePostCommentLikePayloadType = {
     createPostCommentLikeDto: CreatePostCommentLikeDto,
 }
 
+export type GetUserFeedPayloadType = {
+    user:JwtAuthGuardTrueType,
+    skip:number,
+    take:number,
+}
+
 export type FindUserPersonalLikedPostsPayloadType = {
     user:JwtAuthGuardTrueType,
     skip:number,

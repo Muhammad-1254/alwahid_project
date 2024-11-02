@@ -81,6 +81,18 @@ export class PostAllUsersController {
     );
   }
 
+  @Get("post/user/feed")
+  async getUserFeed(
+    @Request() req,
+    @Query("skip", ParseIntPipe) skip,
+    @Query("take", ParseIntPipe) take,
+  ){
+    return this.postService.send(
+      { cmd: "getUserFeed" },
+      { user: req.user, skip, take },
+    );
+  }
+
   @Get("post/user/liked/personal")
   findUserPersonalLikedPosts(
     @Request() req,

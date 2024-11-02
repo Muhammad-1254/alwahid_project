@@ -1,5 +1,15 @@
 import { JwtAuthGuardTrueType, UpdateUserBasicDataDto } from "@app/shared";
 
+
+export type FollowToAnotherUserPayloadType={
+    user:JwtAuthGuardTrueType,
+    followId:string
+}
+
+export type GetUsersSearchPayloadType={
+    user:JwtAuthGuardTrueType,
+    search:string,
+}
 export type getUserFollowersPayloadType = {
     userId: string;
     skip: number;
@@ -21,7 +31,7 @@ export type updateUserBasicDataPayloadType = {
     user: JwtAuthGuardTrueType,
    data: UpdateUserBasicDataDto
 }
-export type unFollowToAnotherUserPayloadType = {
+export type UnFollowToAnotherUserPayloadType = {
     user: JwtAuthGuardTrueType,
     followingId: string
 }

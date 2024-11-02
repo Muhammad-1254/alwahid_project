@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config"
 import { SharedService } from "@app/shared"
 import { PostModule } from "./post.module"
 
+declare const module: any
 
 async function bootstrap() {
     const app = await NestFactory.create(PostModule)
@@ -12,7 +13,14 @@ async function bootstrap() {
     const queue = configService.getOrThrow('RABBITMQ_QUEUE_NAME_POST')
 
     app.connectMicroservice(sharedService.getRmqOptions(queue))
+
     app.startAllMicroservices();
+
+  // for hot module replacement
+  if (module.hot) {
+    module.hot.accept();
+    module.hot.dispose(() => app.close());
+  }
 
 }
 

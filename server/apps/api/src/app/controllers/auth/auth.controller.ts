@@ -69,14 +69,17 @@ export class AuthController {
     return this.authService.send({ cmd: "createAdminUser" }, user);
   }
 
+
   @Post("login")
   async login(@Body() user: { email: string; password: string, role: UserRoleEnum }) {
+    console.log("login request", user);
     return this.authService.send(
       { cmd: "login" },
       user ,
     );
   }
 
+  
   @Post("refresh-token")
   async getAccessToken(@Body() payload: { refreshToken: string }) {
     return  this.authService.send({ cmd: "getAccessToken" }, payload)

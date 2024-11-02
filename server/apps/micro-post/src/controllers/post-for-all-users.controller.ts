@@ -20,7 +20,8 @@ import { CreateLikePostPayloadType,
   UpdatePostCommentContentPayloadType,
   UpdatePostCommentLikePayloadType,
   RemovePostCommentPayloadType,
-  RemovePostLikePayloadType
+  RemovePostLikePayloadType,
+  GetUserFeedPayloadType
  } from "../types/post-payload.type";
 
 @Controller()
@@ -65,6 +66,14 @@ export class PostAllUsersController {
     this.postService.createPostCommentLike(data);
   }
 
+  @MessagePattern({cmd:"getUserFeed"})
+  async getUserFeed(
+    @Ctx() context: RmqContext,
+    @Payload() data: GetUserFeedPayloadType,
+  ){
+    this.sharedService.acknowledgeMessage(context);
+    return this.postService.getUserFeed(data);
+  }
   @MessagePattern({ cmd: "findUserPersonalLikedPosts" })
   findUserPersonalLikedPosts(
     @Ctx() context: RmqContext,

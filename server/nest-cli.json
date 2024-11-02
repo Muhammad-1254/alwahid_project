@@ -5,13 +5,14 @@
   "monorepo": true,
   "root": "apps/api",
   "compilerOptions": {
-    "deleteOutDir": true,
+    "webpack": true,
     "tsConfigPath": "apps/api/tsconfig.app.json"
   },
   "projects": {
     "api":{
       "type": "application",
       "root": "apps/api",
+      "entryFile": "main",
       "sourceRoot": "apps/api/src",
       "compilerOptions": {
         "tsConfigPath": "apps/api/tsconfig.app.json"
@@ -20,6 +21,7 @@
     "micro-user":{
       "type": "application",
       "root": "apps/micro-user",
+      "entryFile": "main",
       "sourceRoot": "apps/micro-user/src",
       "compilerOptions": {
         "tsConfigPath": "apps/micro-user/tsconfig.micro-user.json"
@@ -36,6 +38,7 @@
     "micro-post":{
       "type": "application",
       "root": "apps/micro-post",
+      "entryFile": "main",
       "sourceRoot": "apps/micro-post/src",
       "compilerOptions": {
         "tsConfigPath": "apps/micro-post/tsconfig.micro-post.json"
@@ -44,9 +47,19 @@
     "micro-aws":{
       "type": "application",
       "root": "apps/micro-aws",
+      "entryFile": "main",
       "sourceRoot": "apps/micro-aws/src",
       "compilerOptions": {
         "tsConfigPath": "apps/micro-aws/tsconfig.micro-aws.json"
+      }
+    },
+    "micro-chat":{
+      "type": "application",
+      "root": "apps/micro-chat",
+      "entryFile": "main",
+      "sourceRoot": "apps/micro-chat/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/micro-chat/tsconfig.micro-chat.json"
       }
     },
     "shared":{

@@ -14,36 +14,19 @@ import { PostAdminCreatorController } from "./controllers/post/post.admin-creato
 import { PostAllUsersController } from "./controllers/post/post.all-users.controller";
 import { PostController } from "./controllers/post/post.unsecure.controller";
 import { JwtService } from "@nestjs/jwt";
+import { ChatController } from "./controllers/chat/chat.controller";
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: ".env" }),
-
-      // CacheModule.registerAsync({
-      //   isGlobal: true,
-      //   imports: [ConfigModule],
-      //   inject: [ConfigService],
-      //   useFactory:async (configService:ConfigService)=>({
-      //     store:await redisStore({
-      //       socket:({
-      //         // host: await configService.getOrThrow('REDIS_HOST') || 'localhost',
-      //         // port: await configService.getOrThrow('REDIS_PORT')|| 6379,
-      //         host: 'localhost',
-      //         port: 6379,
-      //       })
-      //     })
-      //   })
-      // }),
-
-      DatabaseModule,
-      
    
     SharedModule.registerRMQ(MicroservicesNames.AUTH_SERVICE, process.env.RABBITMQ_QUEUE_NAME_AUTH),
     SharedModule.registerRMQ(MicroservicesNames.USER_SERVICE, process.env.RABBITMQ_QUEUE_NAME_USER),
     SharedModule.registerRMQ(MicroservicesNames.POST_SERVICE, process.env.RABBITMQ_QUEUE_NAME_POST),
-    SharedModule.registerRMQ(MicroservicesNames.POST_SERVICE, process.env.RABBITMQ_QUEUE_NAME_AWS),
+    SharedModule.registerRMQ(MicroservicesNames.AWS_SERVICE, process.env.RABBITMQ_QUEUE_NAME_AWS),
+    SharedModule.registerRMQ(MicroservicesNames.CHAT_SERVICE, process.env.RABBITMQ_QUEUE_NAME_CHAT),
+    SharedModule.registerRMQ(MicroservicesNames.NOTIFICATION_SERVICE, process.env.RABBITMQ_QUEUE_NAME_NOTIFICATION),
 
-   
   
 
 
@@ -67,7 +50,8 @@ import { JwtService } from "@nestjs/jwt";
     PostAdminController,
     PostAdminCreatorController,
     PostAllUsersController,
-    PostController
+    PostController,
+    ChatController
   ],
   providers: [
      AppService,  

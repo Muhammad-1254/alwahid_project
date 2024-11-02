@@ -14,8 +14,7 @@ export const User = sqliteTable("users", {
   firstname: text("firstname").notNull(),
   lastname: text("lastname").notNull(),
   avatarUrl: text("avatarUrl"),
-  isSpecialUser: integer("isSpecialUser").notNull().default(0),
-  userRole:text("userRole").notNull().default("normal"),
+  isSpecialUser: integer("isSpecialUser").default(0),
 });
 
 export const UserRelations = relations(User, ({ one, many }) => ({
@@ -79,9 +78,10 @@ export const Message = sqliteTable("messages", {
   chatId: text("chatId").references(()=>Chat.id,{onDelete: "cascade", onUpdate:'cascade'}),
   groupId: text("groupId").references(()=>Group.id, {onDelete: "cascade", onUpdate:'cascade'}),
 
-  sentAt: integer("sentAt").notNull(),
-  deliveredAt: integer("deliveredAt"),
-  readAt: integer("readAt"),
+  isSent: integer("isSent").default(0),
+  sentAt: text("sentAt").notNull(),
+  deliveredAt: text("deliveredAt"),
+  readAt: text("readAt"),
 });
 
 export const MessageRelations = relations(Message, ({ one }) => ({

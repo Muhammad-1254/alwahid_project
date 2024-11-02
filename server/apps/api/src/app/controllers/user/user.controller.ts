@@ -9,6 +9,7 @@ import {
   Request,
   Inject,
   UseGuards,
+  Param,
 } from "@nestjs/common";
 
 import {
@@ -34,14 +35,6 @@ export class UserController {
   // createUserLocation(@Body() createUserLocation: createUserLocationDTO) {
   //   return this.userService.send({cmd:"createUserLocation",},createUserLocation);
   // }
-  // @UseGuards(JwtAuthGuard)
-  // @Post("create/follow")
-  // followToAnotherUser(@Request() req, @Query("followTo") followTo: string) {
-  //   return this.userService.send(
-  //     { cmd: "followToAnotherUser" },
-  //     { user: req.user.userId, followTo },
-  //   );
-  // }
 
   // @Get()
   // findAll() {
@@ -57,17 +50,11 @@ export class UserController {
   //   );
   // }
 
-  
   @UseGuards(JwtAuthGuard)
   @Get("all")
-  getAllUsers(
-  ) {
-    return this.userService.send(
-      { cmd: "getAllUsers" },
-      {},
-    );
+  getAllUsers() {
+    return this.userService.send({ cmd: "getAllUsers" }, {});
   }
-
 
   @UseGuards(JwtAuthGuard)
   @Get("get/profile")
@@ -80,33 +67,16 @@ export class UserController {
     return this.userService.send({ cmd: "getUserProfileComplete" }, req.user);
   }
 
-  @Get("get-user-followers")
-  getUserFollowers(
-    @Query("userId") userId: string,
-    @Query("skip") skip: number,
-    @Query("take") take: number,
-    @Query("orderDesc") orderDesc: boolean = true,
-  ) {
+  @UseGuards(JwtAuthGuard)
+  @Get("/search/:search")
+  getUsersSearch(@Request() req, @Param("search") search: string) {
     return this.userService.send(
-      { cmd: "getUserFollowers" },
-      { userId, skip,take, orderDesc },
+      { cmd: "getUsersSearch" },
+      { user: req.user, search },
     );
   }
 
-  @Get("get-user-following")
-  getUserFollowing(
-    @Query("userId") userId: string,
-    @Query("skip") skip: number,
-    @Query("take") take: number,
-    @Query("orderDesc") orderDesc: boolean = true,
-  ) {
-    return this.userService.send(
-      { cmd: "getUserFollowing" },
-      { userId, skip, take, orderDesc },
-    );
-  }
-
-  // TODO: add aws separate service to handle this
+  
   @UseGuards(JwtAuthGuard)
   @Post("profile/avatar/presigned-url")
   getProfileAvatarUploadPresignedUrl(
@@ -138,13 +108,54 @@ export class UserController {
     );
   }
 
+
+  // user following related
   @UseGuards(JwtAuthGuard)
-  @Delete("delete/follow")
-  unFollowToAnotherUser(@Request() req, @Query("followingId") followingId: string) {
+  @Post("follow")
+  followToAnotherUser(@Request() req,
+   @Query("followId",) followId: string) {
+    return this.userService.send(
+      { cmd: "followToAnotherUser" },
+      { user: req.user, followId },
+    );
+  }
+
+  @Get("followers")
+  getUserFollowers(
+    @Query("userId") userId: string,
+    @Query("skip") skip: number,
+    @Query("take") take: number,
+    @Query("orderDesc") orderDesc: boolean = true,
+  ) {
+    return this.userService.send(
+      { cmd: "getUserFollowers" },
+      { userId, skip, take, orderDesc },
+    );
+  }
+
+  @Get("following")
+  getUserFollowing(
+    @Query("userId") userId: string,
+    @Query("skip") skip: number,
+    @Query("take") take: number,
+    @Query("orderDesc") orderDesc: boolean = true,
+  ) {
+    return this.userService.send(
+      { cmd: "getUserFollowing" },
+      { userId, skip, take, orderDesc },
+    );
+  }
+
+
+  @UseGuards(JwtAuthGuard)
+  @Delete("follow")
+  unFollowToAnotherUser(
+    @Request() req,
+    @Query("followingId") followingId: string,
+  ) {
     return this.userService.send(
       { cmd: "unFollowToAnotherUser" },
       { user: req.user, followingId },
     );
   }
-  
 }

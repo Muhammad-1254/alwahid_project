@@ -1,6 +1,5 @@
 // const prefix = `${process.env.EXPO_PUBLIC_SERVER_DOMAIN_DEV}/api`;
 const prefix = `http://192.168.2.107:3000/api`;
-const chatPrefix = `http://192.168.2.107:3001/api`;
 // const prefix = `https://alwahid.vercel.app/api`;
 
 export const apiRoutes = {
@@ -37,6 +36,9 @@ export const apiRoutes = {
   getAllPostLikes:`${prefix}/post/likes/all`,           // for all postLikes /951b6bb5-b71c-4337-81f7-2679093f2c39?skip=0&take=10&isLatest=false
   getAllPostCommentLikes:`${prefix}/post/comment/likes/all`,           // for all postComment likes /951b6bb5-b71c-4337-81f7-2679093f2c39?skip=0&take=10&isLatest=false
   
+
+  // users related
+  getUsersSearch: `${prefix}/user/search`, // query query=> {query:string}
   
   // mix
   getAllCountryFlagsCode: `${prefix}/mix/get/all/country-code`,
@@ -65,22 +67,15 @@ export const apiRoutes = {
 export const apiChatRoutes = {
 
 // websocket connection
-  wsUrl: `http://localhost:3001`, // get
+  wsUrl: `http://192.168.2.107:3001`, // get
 
-  // subscription
-  getUnreadMessages:"getUnreadMessages",
-  createPersonalChat:"createPersonalChat",
-  sendPersonalMessage:"sendPersonalMessage",
-  sendGroupMessage:"sendGroupMessage",
-  isUserOnChatSection:"isUserOnChatSection",
-
-
-  
   // REST API
-  createNewGroup: `${chatPrefix}/chats/group/new`, // post
-  addUserInGroup: `${chatPrefix}/chats/group/add-users`, // post
-  updateGroupInfo: `${chatPrefix}/chats/group/update/info`, // patch
-  removeUsersFromGroup: `${chatPrefix}/chats/group/remove/user`, // delete
+  createNewUserInChatSection: `${prefix}/chats/new/user`, // post
+  getUserOnChatSection: `${prefix}/chats/check/user`, // get
+  createNewGroup: `${prefix}/chats/group/new`, // post
+  addUserInGroup: `${prefix}/chats/group/add-users`, // post
+  updateGroupInfo: `${prefix}/chats/group/update/info`, // patch
+  removeUsersFromGroup: `${prefix}/chats/group/remove/user`, // delete
 }
 
 

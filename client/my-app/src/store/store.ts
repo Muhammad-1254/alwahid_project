@@ -4,7 +4,7 @@ import authReducer from "./slices/auth";
 import postDataReducer from "./slices/postData";
 import newPostReducer from "./slices/addPost";
 import userInformationReducer from "./slices/userInformation";
-
+import profileReducer from "./slices/profile"
 import chatScreenReducer from "./slices/chatScreenData";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { persistStore, persistReducer } from "redux-persist";
@@ -16,12 +16,14 @@ const rootReducer = combineReducers({
   newPost: newPostReducer,
   chatScreen: chatScreenReducer,
   userInformation: userInformationReducer,
+  profileScreen:profileReducer
 });
 
 const persistConfig = {
   key: "root",
   storage: AsyncStorage,
   whitelist: ["userInformation"],
+  blacklist: ["profileScreen"],
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -32,7 +34,7 @@ export const store = configureStore({
     return getDefaultMiddleware({
       serializableCheck: {
         ignoredActions: ["persist/PERSIST", "persist/REHYDRATE"],
-        ignoredPaths: ["register", "rehydrate"],
+        ignoredPaths: ["profileScreen.listScrollY","register", "rehydrate"],
       },
     });
   },

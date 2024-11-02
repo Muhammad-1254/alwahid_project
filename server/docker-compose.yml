@@ -3,62 +3,163 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
-    # volumes:
-    #   - /var/lib/rabbitmq
+    hostname: "rabbitmq"
+    volumes:
+      - /var/lib/rabbitmq
     ports:
       - "5672:5672" 
       - "15672:15672"
     env_file:
-      - .env
+      - .env.prod
     networks:
-      - app-network
-
-  redis:
-    image: redis:latest
-    container_name: redis
-    ports:
-      - "6379:6379"
-    networks:
-      - app-network
-
-  redis-commander:
-    image: rediscommander/redis-commander:latest
-    container_name: redis-commander
-    ports:
-      - "8081:8081"  # Redis-Commander port
-    environment:
-      - REDIS_HOSTS=local:redis:6379
-    networks:
-      - app-network
+      - backend
   
-  # gateway:
-  #   build:
-  #     context: ./
-  #     dockerfile: ./Dockerfile
+  # redis:
+  #   image: redis:latest
+  #   command: /bin/sh -c "redis-server --requirepass $$REDIS_PASS"
+  #   env_file:
+  #     - .env.prod
   #   ports:
-  #     - "3000:3000"
-  #   depends_on:
-  #     - rabbitmq
-  #     - redis
-  #     - user
+  #     - 6379:6379
   #   volumes:
-  #     - .:/usr/src/app
-  #     - /usr/src/app/node_modules
-  #   command: yarn start:dev
+  #     - ./redis/data:/data
+  #   networks:
+  #     - backend
 
-  # user:
-  #   build:
-  #     context: ./
-  #     dockerfile: ./src/temp-m/user/Dockerfile
+
+  # redis-commander:
+  #   image: rediscommander/redis-commander:latest
+  #   container_name: redis-commander
+  #   hostname: redis-commander
+  #   ports:
+  #     - "8000:8081"  # Redis-Commander port
+  #   environment:
+  #     - REDIS_HOSTS=local:redis:6379
+  #   # restart: always
   #   depends_on:
-  #     - rabbitmq
-  #   volumes:
-  #     - .:/usr/src/app
-  #     - /usr/src/app/node_modules
-  #   command: yarn start:dev user
-      
+  #     - redis
+  #   networks:
+  #     - backend
+  
+ 
+  api:
+    build:
+      context: ./
+      dockerfile: ./apps/api/Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.prod
+    depends_on:
+      - rabbitmq
+      # - redis
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    # restart: always
+    command: npm run start:dev1 api
+    networks:
+      - backend
+
+  micro-user:
+    build:
+      context: ./
+      dockerfile: ./apps/micro-user/Dockerfile
+    env_file:
+      - .env.prod
+    depends_on:
+      - rabbitmq
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    # restart: always
+    command: npm run start:dev1 micro-user
+    networks:
+      - backend
+
+  micro-post:
+    build:
+      context: ./
+      dockerfile: ./apps/micro-post/Dockerfile
+    env_file:
+      - .env.prod
+    depends_on:
+      - rabbitmq
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    # restart: always 
+    command: npm run start:dev1 micro-post
+    networks:
+      - backend
+  
+  micro-aws:
+    build:
+      context: ./
+      dockerfile: ./apps/micro-aws/Dockerfile
+    env_file:
+      - .env.prod
+    depends_on:
+      - rabbitmq
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    # restart: always 
+    command: npm run start:dev1 micro-aws
+    networks:
+      - backend
+
+  micro-auth:
+    build:
+      context: ./
+      dockerfile: ./apps/micro-auth/Dockerfile
+    env_file:
+      - .env.prod
+    depends_on:
+      - rabbitmq
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    # restart: always 
+    command: npm run start:dev1 micro-auth
+    networks:
+      - backend
+
+
+  micro-chat:
+    build:
+      context: ./
+      dockerfile: ./apps/micro-chat/Dockerfile
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env.prod
+    depends_on:
+      - rabbitmq
+      # - redis
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run start:dev1 micro-chat
+    # restart: always
+    # develop:
+    #   watch:
+    #     - action: sync
+    #       path: ./apps/micro-chat/src
+    #       target: /usr/src/app/src
+    #       ignore:
+    #         - node_modules
+    #     - action: rebuild
+    #       path: package.json
+         
 
   
+# networks:
+#   app-network:
+#     driver: bridge
+
 networks:
-  app-network:
+  backend:
     driver: bridge
+
+
