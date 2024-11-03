@@ -3,7 +3,7 @@ import { View, TextInput, Text, Pressable, ScrollView } from "react-native";
 import { Link, useRouter } from "expo-router";
 import axios from "axios";
 import { apiRoutes } from "@/src/constants/apiRoutes";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import Checkbox from "expo-checkbox";
 import { UserRoleEnum } from "@/src/types/user";
 import { AuthLoadingModal } from "./signup";
@@ -17,11 +17,11 @@ import { Colors } from "@/src/constants/Colors";
 import ErrorHandler from "@/src/lib/ErrorHandler";
 
 type InitialLoginStateProps = {
-  username: string;
+  email: string;
   password: string;
   userRole: UserRoleEnum;
   errors: {
-    username?: string;
+    email?: string;
     password?: string;
     userRole?: UserRoleEnum;
     unknown?: string;
@@ -29,7 +29,7 @@ type InitialLoginStateProps = {
 };
 export default function Login() {
   const [user, setUser] = useState<InitialLoginStateProps>({
-    username: "usman@gmail.com",
+    email: "usman@gmail.com",
     password: "usman123",
     userRole: UserRoleEnum.NORMAL,
     errors: {},
@@ -49,19 +49,19 @@ export default function Login() {
     setUser((prev) => ({ ...prev, errors: {} }));
     
     // checking if email is valid
-    if(!checkIsValidEmail(user.username)){
+    if(!checkIsValidEmail(user.email)){
       // if email is not valid then check if it is a phone number
-      const phoneNumber = checkIsValidPhoneNumber(user.username);
+      const phoneNumber = checkIsValidPhoneNumber(user.email);
       if(!phoneNumber){
         setUser((prev) => ({
           ...prev,
-          errors: { username: "Invalid Email or Phone Number" },
+          errors: { email: "Invalid Email or Phone Number" },
         }));
         return;
       }else{
         setUser((prev) => ({
           ...prev,
-          username: phoneNumber,
+          email: phoneNumber,
         }));
       }
     }
@@ -69,7 +69,7 @@ export default function Login() {
     try {
       setLoading(true);
       const res = await axios.post(apiRoutes.login, {
-        username: user.username,
+        email: user.email,
         password: user.password,
         role: user.userRole,
       });
@@ -83,8 +83,8 @@ export default function Login() {
       if (res.status === 200 || res.status === 201) {
         if (res.data.accessToken && res.data.refreshToken) {
           // save token to local storage
-          await AsyncStorage.setItem("accessToken", res.data.accessToken);
-          await AsyncStorage.setItem("refreshToken", res.data.refreshToken);
+          await SecureStore.setItemAsync("accessToken", res.data.accessToken);
+          await SecureStore.setItemAsync("refreshToken", res.data.refreshToken);
           // save user data to redux
           dispatch(setIsAuthenticated(true));
         } else {
@@ -101,7 +101,7 @@ export default function Login() {
       console.log("error while login", error);
       if(axios.isAxiosError(error)){
         if(error.response?.status === 401){
-          ErrorHandler.handle(error,{alertTitle:"Invalid Credentials",customMessage:`${checkIsValidEmail(user.username)?"Email":"Phone Number"} or Password is incorrect`});
+          ErrorHandler.handle(error,{alertTitle:"Invalid Credentials",customMessage:`${checkIsValidEmail(user.email)?"Email":"Phone Number"} or Password is incorrect`});
         }else{
           ErrorHandler.handle(error);
         }
@@ -129,16 +129,16 @@ export default function Login() {
             Email or Phone
           </Text>
           <TextInput
-            onChangeText={(t) => setUser((prev) => ({ ...prev, username: t }))}
-            value={user.username}
+            onChangeText={(t) => setUser((prev) => ({ ...prev, email: t }))}
+            value={user.email}
             placeholder="jonDoe@address.com"
             autoCapitalize={"none"}
             keyboardType="email-address"
             className="w-full p-2 text-input dark:text-inputDark bg-secondaryForeground dark:bg-secondaryForegroundDark placeholder:text-muted dark:placeholder:text-mutedDark rounded-inputRadius"
           />
-          {user.errors.username && (
+          {user.errors.email && (
             <Text className="text-destructive dark:text-destructiveDark font-normal  mt-2 text-center">
-              {user.errors.username}
+              {user.errors.email}
             </Text>
           )}
         </View>

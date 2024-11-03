@@ -1,7 +1,7 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true,
+    "strict": false,
     "paths": {
       "@/*": [
         "./*"
@@ -13,5 +13,5 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
-, "src/app/(tabs)/chats/[userId].tsz"  ]
+, "src/app/(tabs)/chats/[userId].tsx"  ]
 }

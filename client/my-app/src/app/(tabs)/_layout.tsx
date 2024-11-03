@@ -9,16 +9,21 @@ export default function TabsLayout() {
 
   return (
     <Tabs
-      initialRouteName="index"
+      initialRouteName="home"
       safeAreaInsets={{ bottom: 10 }}
       screenOptions={{
         tabBarLabelStyle: { fontSize: 10, marginBottom: -2 },
+        tabBarHideOnKeyboard:true,
+        tabBarStyle:{
+          backgroundColor:'red'
+        },
+
         tabBarActiveTintColor:
           colorScheme === "dark" ? Colors.dark.primary : Colors.light.primary,
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
           title: "Home",
 
@@ -127,9 +132,9 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="chats"
+        name="(chat)"
         options={{
-          title: "Chats",
+          title: "Chat",
           headerStyle: {
             backgroundColor:
               colorScheme === "dark" ? Colors.dark.muted : Colors.light.muted,
@@ -171,8 +176,9 @@ export default function TabsLayout() {
           ),
         }}
       />
+      
       <Tabs.Screen
-        name="profile"
+        name="(profile)"
         options={{
           headerTransparent: true,
   
